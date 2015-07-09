@@ -1,0 +1,13 @@
+from functools import partial
+from django.conf import settings
+
+from wallet import api
+
+DEFAULT_CURRENCY = settings.DEFAULT_CURRENCY
+
+get_wallet = partial(api.get_wallet, currency=DEFAULT_CURRENCY)
+get_balance = partial(api.get_balance, currency=DEFAULT_CURRENCY)
+list_transactions = partial(api.list_transactions, currency=DEFAULT_CURRENCY)
+withdraw = api.withdraw
+deposit = api.deposit
+transfer = api.transfer

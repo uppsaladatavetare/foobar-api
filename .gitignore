@@ -1,0 +1,53 @@
+# Python bytecode:
+*.py[co]
+
+# Project specific
+.tox
+.python-version
+.venv
+.coverage
+env/
+venv/
+
+# Packaging files:
+*.egg*
+
+# Editor temp files:
+*.swp
+*~
+
+# Sphinx docs:
+build
+
+# SQLite3 database files:
+*.db
+*.sqlite3
+
+# Logs:
+*.log
+
+# Pycharm:
+.idea
+
+# Local settings
+src/foobar/settings/local_*.py
+
+# Media
+/foobar/media/
+
+# Assets
+/foobar/assets/
+
+# Folder view configuration files
+.DS_Store
+Desktop.ini
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+todo.todo
