@@ -24,7 +24,4 @@ class PurchaseAPI(viewsets.ViewSet):
                 'Insufficient funds',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        return Response(
-            data=serializer.data,
-            status=status.HTTP_200_OK
-        )
+        return Response(status=status.HTTP_200_OK)
