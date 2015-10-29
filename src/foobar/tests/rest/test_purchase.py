@@ -46,6 +46,7 @@ class TestPurchaseAPI(AuthenticatedAPITestCase):
         }
         response = self.api_client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['amount'], 103)
         _, balance = wallet_api.get_balance(wallet_obj.owner_id, 'SEK')
         self.assertEqual(balance, Money(897, 'SEK'))
 

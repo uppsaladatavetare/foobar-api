@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from shop import api as shop_api
+from ..fields import MoneyField
 
 
-class PurchaseSerializer(serializers.Serializer):
+class PurchaseRequestSerializer(serializers.Serializer):
     account_id = serializers.UUIDField()
     products = serializers.ListField(allow_empty=False)
 
@@ -30,3 +31,7 @@ class PurchaseSerializer(serializers.Serializer):
             'account_id': self.validated_data['account_id'],
             'products': products
         }
+
+
+class PurchaseSerializer(serializers.Serializer):
+    amount = MoneyField()
