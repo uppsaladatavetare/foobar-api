@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from djmoney.models.fields import MoneyField
 from bananas.models import UUIDModel, TimeStampedModel
+from moneyed import Money
 
 
 class Account(UUIDModel, TimeStampedModel):
@@ -21,7 +22,8 @@ class Purchase(UUIDModel, TimeStampedModel):
 
     @property
     def amount(self):
-        return sum(item.amount for item in self.items.all())
+        amount = self.items.aggregate(amount=models.Sum('amount'))['amount']
+        return Money(amount or 0, settings.DEFAULT_CURRENCY)
 
     def __str__(self):
         return str(self.id)
