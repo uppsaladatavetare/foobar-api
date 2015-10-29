@@ -34,7 +34,7 @@ class WalletTrxsQuerySet(models.QuerySet):
 
     def sum(self):
         amount = self.aggregate(amount=models.Sum('amount'))['amount']
-        return Money(amount or 0, 'SEK')
+        return Money(amount or 0, settings.DEFAULT_CURRENCY)
 
     def balance(self):
         incoming = self.finalized().incoming().sum()
