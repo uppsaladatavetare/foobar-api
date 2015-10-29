@@ -22,8 +22,9 @@ class Purchase(UUIDModel, TimeStampedModel):
 
     @property
     def amount(self):
-        amount = self.items.aggregate(amount=models.Sum('amount'))['amount']
-        return Money(amount or 0, settings.DEFAULT_CURRENCY)
+        qs = self.items.all()
+        zero_money = Money(0, settings.DEFAULT_CURRENCY)
+        return sum((item.amount * item.qty for item in qs), zero_money)
 
     def __str__(self):
         return str(self.id)
