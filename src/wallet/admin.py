@@ -60,6 +60,9 @@ class WalletAdmin(ReadOnlyMixin, admin.ModelAdmin):
         })
     )
 
+    class Media:
+        css = {'all': ('css/hide_admin_original.css',)}
+
     def balance(self, obj):
         _, balance = wallet_api.get_balance(obj.owner_id,
                                             settings.DEFAULT_CURRENCY)

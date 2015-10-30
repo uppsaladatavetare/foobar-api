@@ -68,3 +68,6 @@ class ProductAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+    class Media:
+        css = {'all': ('css/hide_admin_original.css',)}
