@@ -53,7 +53,7 @@ class PurchaseItemInline(ReadOnlyMixin, admin.TabularInline):
 
 @admin.register(models.Account)
 class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'user', 'card_id', 'balance')
+    list_display = ('id', 'name', 'user', 'card_id', 'balance')
     readonly_fields = ('id', 'wallet_link', 'date_created', 'date_modified')
     inlines = (PurchaseInline,)
     fieldsets = (
@@ -61,6 +61,7 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
             'fields': (
                 'id',
                 'user',
+                'name',
                 'card_id',
             )
         }),

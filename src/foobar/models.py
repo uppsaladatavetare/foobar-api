@@ -10,6 +10,8 @@ from moneyed import Money
 
 class Account(UUIDModel, TimeStampedModel):
     user = models.ForeignKey(User, null=True, blank=True)
+    name = models.CharField(null=True, blank=True, max_length=128)
+    email = models.CharField(null=True, blank=True, max_length=128)
 
     # The card id is a uid from a mifare classic 1k card and is supposed
     # to be 8 bytes long.
