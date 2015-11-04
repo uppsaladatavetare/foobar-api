@@ -11,3 +11,7 @@ class AccountSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     user_id = serializers.UUIDField(read_only=True, source='user.id')
     balance = serializers.SerializerMethodField()
+
+
+class AccountQuerySerializer(serializers.Serializer):
+    card_id = serializers.IntegerField()

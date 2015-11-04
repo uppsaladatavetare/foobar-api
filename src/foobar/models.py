@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 from djmoney.models.fields import MoneyField
 from bananas.models import UUIDModel, TimeStampedModel
@@ -11,7 +13,13 @@ class Account(UUIDModel, TimeStampedModel):
 
     # The card id is a uid from a mifare classic 1k card and is supposed
     # to be 8 bytes long.
-    card_id = models.IntegerField(unique=True)
+    card_id = models.CharField(unique=True, max_length=20)
+
+    def clean(self):
+        try:
+            int(self.card_id)
+        except ValueError:
+            raise ValidationError(_('The card id should be an integer.'))
 
     def __str__(self):
         return str(self.id)
