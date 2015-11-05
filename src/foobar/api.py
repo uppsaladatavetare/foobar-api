@@ -18,9 +18,14 @@ def get_account(card_id):
 def purchase(account_id, products):
     """
     Products should be a list of tuples containing paiars of product ids
-    and their quantities.
+    and their quantities. If account_id is None, a cash purchase will be made -
+    no account will be assigned to the purchase and the money will be
+    transfered to the cash wallet.
     """
-    account_obj = Account.objects.get(id=account_id)
+    if account_id is not None:
+        account_obj = Account.objects.get(id=account_id)
+    else:
+        account_obj = None
     purchase_obj = Purchase.objects.create(account=account_obj)
     products = [(shop_api.get_product(p), q) for p, q in products]
     # make sure the quantites are greater than 0
@@ -41,10 +46,17 @@ def purchase(account_id, products):
         )
     zero_money = Money(0, settings.DEFAULT_CURRENCY)
     total_amount = sum((p.price * q for p, q in products), zero_money)
-    wallet_api.transfer(
-        debtor_id=account_obj.id,
-        creditor_id=settings.FOOBAR_WALLET,
-        amount=total_amount,
-        reference=purchase_obj.id
-    )
+    if account_id is not None:
+        wallet_api.transfer(
+            debtor_id=account_obj.id,
+            creditor_id=settings.FOOBAR_MAIN_WALLET,
+            amount=total_amount,
+            reference=purchase_obj.id
+        )
+    else:
+        wallet_api.deposit(
+            owner_id=settings.FOOBAR_CASH_WALLET,
+            amount=total_amount,
+            reference=purchase_obj.id
+        )
     return purchase_obj

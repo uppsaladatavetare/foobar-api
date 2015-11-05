@@ -28,7 +28,12 @@ class Account(UUIDModel, TimeStampedModel):
 
 
 class Purchase(UUIDModel, TimeStampedModel):
-    account = models.ForeignKey(Account)
+    # account is None for cash payments
+    account = models.ForeignKey(Account, related_name='purchases',
+                                null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_created']
 
     @property
     def amount(self):

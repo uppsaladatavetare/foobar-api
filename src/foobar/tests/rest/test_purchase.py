@@ -1,4 +1,5 @@
 from django.core.urlresolvers import reverse
+from django.conf import settings
 from rest_framework import status
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
@@ -49,6 +50,29 @@ class TestPurchaseAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.data['amount'], 103)
         _, balance = wallet_api.get_balance(wallet_obj.owner_id, 'SEK')
         self.assertEqual(balance, Money(897, 'SEK'))
+
+    def test_cash_purchase(self):
+        product_obj1 = ProductFactory.create(
+            name='Billys Ooriginal',
+            price=Money(13, 'SEK')
+        )
+        product_obj2 = ProductFactory.create(
+            name='Kebabrulle',
+            price=Money(30, 'SEK')
+        )
+        url = reverse('api:purchases-list')
+        data = {
+            'account_id': None,
+            'products': [
+                {'id': product_obj1.id, 'qty': 1},
+                {'id': product_obj2.id, 'qty': 3},
+            ]
+        }
+        response = self.api_client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['amount'], 103)
+        _, balance = wallet_api.get_balance(settings.FOOBAR_CASH_WALLET, 'SEK')
+        self.assertEqual(balance, Money(103, 'SEK'))
 
     def test_purchase_insufficient_funds(self):
         account_obj = AccountFactory.create()

@@ -4,7 +4,7 @@ from ..fields import MoneyField
 
 
 class PurchaseRequestSerializer(serializers.Serializer):
-    account_id = serializers.UUIDField()
+    account_id = serializers.UUIDField(allow_null=True)
     products = serializers.ListField(allow_empty=False)
 
     def validate_products(self, value):
