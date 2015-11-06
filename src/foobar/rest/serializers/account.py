@@ -10,6 +10,7 @@ class AccountSerializer(serializers.Serializer):
 
     id = serializers.UUIDField(read_only=True)
     user_id = serializers.UUIDField(read_only=True, source='user.id')
+    name = serializers.CharField(read_only=True)
     balance = serializers.SerializerMethodField()
 
 
