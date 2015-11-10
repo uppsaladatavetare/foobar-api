@@ -7,7 +7,7 @@ https://docs.djangoproject.com/en/1.7/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.7/ref/settings/
 """
-
+import datetime
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -175,3 +175,4 @@ FOOBAR_MAIN_WALLET = os.getenv('FOOBAR_MAIN_WALLET',
                                'ae912470-b9d2-4c53-85e9-4af9ef35a2a1')
 FOOBAR_CASH_WALLET = os.getenv('FOOBAR_CASH_WALLET',
                                '1c61f916-a251-4dc0-a842-01aa2dee73f8')
+PURCHASE_CANCEL_MAX_DELTA = datetime.timedelta(minutes=15)

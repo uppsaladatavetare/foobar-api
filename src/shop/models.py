@@ -56,7 +56,7 @@ class Product(UUIDModel, TimeStampedModel):
     # cached quantity
     qty = models.IntegerField(default=0)
 
-    objects = querysets.ProductQuerySet
+    objects = querysets.ProductQuerySet.as_manager()
 
     class Meta:
         verbose_name = _('product')
@@ -70,6 +70,10 @@ class ProductTransaction(UUIDModel, TimeStampedModel):
     product = models.ForeignKey(Product, related_name='transactions')
     qty = models.IntegerField()
     trx_type = EnumIntegerField(enums.TrxType)
+    trx_status = EnumIntegerField(enums.TrxStatus,
+                                  default=enums.TrxStatus.FINALIZED)
+    reference = models.CharField(max_length=128, blank=True, null=True)
+    objects = querysets.ProductTrxQuerySet.as_manager()
 
     class Meta:
         verbose_name = _('transaction')

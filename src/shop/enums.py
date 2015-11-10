@@ -16,3 +16,8 @@ class TrxType(enum.Enum):
     # inventory. This special type is used to mark a correction of the product
     # quantity.
     CORRECTION = 2
+
+
+class TrxStatus(enum.Enum):
+    FINALIZED = 0
+    CANCELED = 1

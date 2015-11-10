@@ -11,3 +11,5 @@ list_transactions = partial(api.list_transactions, currency=DEFAULT_CURRENCY)
 withdraw = api.withdraw
 deposit = api.deposit
 transfer = api.transfer
+get_transactions_by_ref = api.get_transactions_by_ref
+cancel_transaction = api.cancel_transaction

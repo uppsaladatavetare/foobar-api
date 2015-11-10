@@ -1,5 +1,5 @@
 from django.db import transaction
-from . import models
+from . import models, enums
 
 
 @transaction.atomic
@@ -32,16 +32,32 @@ def get_product(id):
         return None
 
 
+def get_product_transactions_by_ref(reference):
+    """Return item transactions with given reference."""
+    return models.ProductTransaction.objects.filter(reference=reference)
+
+
 @transaction.atomic
-def create_product_transaction(product_id, trx_type, qty):
+def create_product_transaction(product_id, trx_type, qty, reference=None):
     """
     Create item transaction for given item.
 
     It automagically takes care of updating the quantity for the product.
     """
     product_obj = models.Product.objects.get(id=product_id)
-    trx_obj = product_obj.transactions.create(trx_type=trx_type, qty=qty)
+    trx_obj = product_obj.transactions.create(
+        trx_type=trx_type,
+        qty=qty,
+        reference=reference
+    )
     return trx_obj
+
+
+@transaction.atomic
+def cancel_product_transaction(trx_id):
+    trx_obj = models.ProductTransaction.objects.get(id=trx_id)
+    trx_obj.trx_status = enums.TrxStatus.CANCELED
+    trx_obj.save()
 
 
 def list_products(start=None, limit=None, **kwargs):

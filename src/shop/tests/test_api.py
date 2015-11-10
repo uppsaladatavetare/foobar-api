@@ -37,6 +37,43 @@ class ShopAPITest(TestCase):
         product_obj = api.get_product(product_obj.id)
         self.assertEqual(product_obj.qty, -1)
 
+    def test_get_product_transactions_by_ref(self):
+        product_obj = factories.ProductFactory.create()
+        api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=1,
+            reference='1337'
+        )
+        api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=1,
+            reference='1337'
+        )
+        trx_objs = api.get_product_transactions_by_ref('1337')
+        self.assertEqual(len(trx_objs), 2)
+        trx_objs = api.get_product_transactions_by_ref('7331')
+        self.assertEqual(len(trx_objs), 0)
+
+    def test_cancel_product_transaction(self):
+        product_obj = factories.ProductFactory.create()
+        trx_obj = api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=1
+        )
+        trx_obj = api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=2
+        )
+        product_obj = api.get_product(product_obj.id)
+        self.assertEqual(product_obj.qty, 3)
+        api.cancel_product_transaction(trx_obj.id)
+        product_obj = api.get_product(product_obj.id)
+        self.assertEqual(product_obj.qty, 1)
+
     def test_list_products(self):
         for _ in range(14):
             factories.ProductFactory.create()

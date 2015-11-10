@@ -37,6 +37,18 @@ def list_transactions(owner_id, currency, trx_type=None, trx_status=None,
     return qs.all()[start:limit]
 
 
+def get_transactions_by_ref(reference):
+    """Return transactions with given reference."""
+    return models.WalletTransaction.objects.filter(reference=reference)
+
+
+def cancel_transaction(trx_id):
+    """Cancels a transaction."""
+    trx_obj = models.WalletTransaction.objects.get(id=trx_id)
+    trx_obj.trx_status = enums.TrxStatus.CANCELED
+    trx_obj.save()
+
+
 @transaction.atomic
 def withdraw(owner_id, amount, reference=None):
     """Withdraw given amount from the wallet.

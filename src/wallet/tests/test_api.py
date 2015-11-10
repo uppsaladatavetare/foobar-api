@@ -148,3 +148,31 @@ class WalletTest(TestCase):
         with self.assertRaises(exceptions.InsufficientFunds):
             api.transfer(wallet_obj1.owner_id, wallet_obj2.owner_id,
                          Money(100, wallet_obj1.currency))
+
+    def test_transaction_by_ref(self):
+        wallet_obj = factories.WalletFactory.create()
+        trx_obj1 = factories.WalletTrxFactory.create(
+            wallet=wallet_obj,
+            trx_status=enums.TrxStatus.FINALIZED,
+            trx_type=enums.TrxType.INCOMING,
+            amount=Money(100, wallet_obj.currency),
+            reference='1337'
+        )
+        trx_objs = api.get_transactions_by_ref('1337')
+        self.assertEqual(len(trx_objs), 1)
+        self.assertEqual(trx_obj1.id, trx_objs[0].id)
+        trx_objs = api.get_transactions_by_ref('7331')
+        self.assertEqual(len(trx_objs), 0)
+
+    def test_cancel_transaction(self):
+        wallet_obj = factories.WalletFactory.create()
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        trx_obj = api.deposit(wallet_obj.owner_id,
+                              Money(100, wallet_obj.currency))
+        self.assertIsNotNone(trx_obj)
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(balance, Money(100, wallet_obj.currency))
+        api.cancel_transaction(trx_obj.id)
+        self.assertIsNotNone(trx_obj)
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(balance, Money(0, wallet_obj.currency))

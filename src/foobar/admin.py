@@ -2,10 +2,12 @@ from django.contrib import admin
 from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.db.models import F, Sum, ExpressionWrapper, DecimalField
+from django.utils.translation import ugettext_lazy as _
 from foobar.wallet import api as wallet_api
 from shop import api as shop_api
 from moneyed import Money
-from . import models
+from .exceptions import NotCancelableException
+from . import models, api
 
 
 class ReadOnlyMixin(object):
@@ -95,15 +97,38 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
 
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'account', 'amount', 'date_created',)
-    readonly_fields = ('id', 'account', 'amount', 'date_created',
+    list_display = ('id', 'account', 'status', 'amount', 'date_created',)
+    readonly_fields = ('id', 'account', 'amount', 'date_created', 'status',
                        'date_modified')
     inlines = (PurchaseItemInline,)
+    list_filter = ('status',)
     change_list_template = 'admin/purchase/list.html'
     date_hierarchy = 'date_created'
+    actions = ['cancel_purchases']
 
     class Media:
         css = {'all': ('css/hide_admin_original.css',)}
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        del actions['delete_selected']
+        return actions
+
+    def cancel_purchases(self, request, queryset):
+        failed = 0
+        for obj in queryset:
+            try:
+                api.cancel_purchase(obj.id)
+            except NotCancelableException:
+                failed += 1
+        count = queryset.count()
+        if failed:
+            msg = _('Canceled %d purchase(s) (%d failed).')
+            msg = msg % (count - failed, failed)
+        else:
+            msg = _('Canceled %d purchase(s).') % count
+        return self.message_user(request, msg)
+    cancel_purchases.short_description = _('Cancel purchases')
 
     def aggregated_sum(self, qs):
         expr = ExpressionWrapper(
@@ -114,9 +139,10 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         response = super().changelist_view(request, extra_context)
-        qs = response.context_data['cl'].queryset
-        extra_context = {
-            'total_amount': self.aggregated_sum(qs)
-        }
-        response.context_data.update(extra_context)
+        if hasattr(response, 'context_data'):
+            qs = response.context_data['cl'].queryset
+            extra_context = {
+                'total_amount': self.aggregated_sum(qs)
+            }
+            response.context_data.update(extra_context)
         return response
