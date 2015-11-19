@@ -92,8 +92,9 @@ def cancel_purchase(purchase_id, force=False):
     # Cancel related wallet transactions
     trx_objs = wallet_api.get_transactions_by_ref(purchase_obj.id)
     # Exactly two transactions (withdrawal + deposit) with given reference
-    # should exist.
-    assert len(trx_objs) == 2
+    # should exist for card payments. Only one for cash payments.
+    assert ((purchase_obj.account is not None and len(trx_objs) == 2)
+            or purchase_obj.account is None and len(trx_objs) == 1)
     for trx_obj in trx_objs:
         wallet_api.cancel_transaction(trx_obj.id)
 
