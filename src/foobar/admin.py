@@ -146,3 +146,25 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
             }
             response.context_data.update(extra_context)
         return response
+
+
+# Monkeypatch the default admin site in order to provide
+# custom context to the admin templates
+admin.site.index_template = 'admin/foobar_index.html'
+
+
+def each_context(request):
+    cw_obj, cash_balance = wallet_api.get_balance(settings.FOOBAR_CASH_WALLET)
+    mw_obj, main_balance = wallet_api.get_balance(settings.FOOBAR_MAIN_WALLET)
+
+    ctx = _each_context(request)
+    ctx.update({
+        'cash_wallet': cw_obj,
+        'cash_balance': cash_balance,
+        'main_wallet': mw_obj,
+        'main_balance': main_balance,
+    })
+    return ctx
+
+_each_context = admin.site.each_context
+admin.site.each_context = each_context

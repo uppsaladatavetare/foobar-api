@@ -1,0 +1,29 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div class="app-auth module" style="float: left; width: 49%;">
+    <table width="100%">
+        <caption>Main Wallet</caption>
+        <tbody>
+            <tr class="model-group">
+                <th scope="row" style="text-align: center; padding: 20px 0;">
+                    <a href="{% url 'admin:wallet_wallet_change' main_wallet.id %}" style="font-size: 20px;">{{ main_balance }}</a>
+                </th>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="app-auth module" style="float: right; width: 49%;">
+    <table width="100%">
+        <caption>Cash Wallet</caption>
+        <tbody>
+            <tr class="model-group">
+                <th scope="row" style="text-align: center; padding: 20px 0;">
+                    <a href="{% url 'admin:wallet_wallet_change' cash_wallet.id %}" style="font-size: 20px;">{{ cash_balance }}</a>
+                </th>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{{ block.super }}
+{% endblock content %}
