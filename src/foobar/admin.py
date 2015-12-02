@@ -156,6 +156,9 @@ admin.site.index_template = 'admin/foobar_index.html'
 def each_context(request):
     cw_obj, cash_balance = wallet_api.get_balance(settings.FOOBAR_CASH_WALLET)
     mw_obj, main_balance = wallet_api.get_balance(settings.FOOBAR_MAIN_WALLET)
+    total_balance = wallet_api.total_balance(
+        exclude_ids=[settings.FOOBAR_CASH_WALLET, settings.FOOBAR_MAIN_WALLET]
+    )
 
     ctx = _each_context(request)
     ctx.update({
@@ -163,6 +166,7 @@ def each_context(request):
         'cash_balance': cash_balance,
         'main_wallet': mw_obj,
         'main_balance': main_balance,
+        'credit_account_balance': total_balance
     })
     return ctx
 

@@ -32,13 +32,13 @@ class WalletTrxsQuerySet(models.QuerySet):
     def incoming(self):
         return self.filter(trx_type=enums.TrxType.INCOMING)
 
-    def sum(self):
+    def sum(self, currency=None):
         amount = self.aggregate(amount=models.Sum('amount'))['amount']
-        return Money(amount or 0, settings.DEFAULT_CURRENCY)
+        return Money(amount or 0, currency or settings.DEFAULT_CURRENCY)
 
-    def balance(self):
-        incoming = self.finalized().incoming().sum()
-        outgoing = self.pending_or_finalized().outgoing().sum()
+    def balance(self, currency=None):
+        incoming = self.finalized().incoming().sum(currency)
+        outgoing = self.pending_or_finalized().outgoing().sum(currency)
         return incoming - outgoing
 
 

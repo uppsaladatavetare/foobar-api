@@ -176,3 +176,36 @@ class WalletTest(TestCase):
         self.assertIsNotNone(trx_obj)
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
         self.assertEqual(balance, Money(0, wallet_obj.currency))
+
+    def test_total_balance(self):
+        wallet_obj1 = factories.WalletFactory.create()
+        factories.WalletTrxFactory.create(
+            wallet=wallet_obj1,
+            trx_status=enums.TrxStatus.FINALIZED,
+            trx_type=enums.TrxType.INCOMING,
+            amount=Money(100, wallet_obj1.currency)
+        )
+        wallet_obj2 = factories.WalletFactory.create()
+        factories.WalletTrxFactory.create(
+            wallet=wallet_obj2,
+            trx_status=enums.TrxStatus.FINALIZED,
+            trx_type=enums.TrxType.INCOMING,
+            amount=Money(500, wallet_obj1.currency)
+        )
+        factories.WalletTrxFactory.create(
+            wallet=wallet_obj2,
+            trx_status=enums.TrxStatus.PENDING,
+            trx_type=enums.TrxType.INCOMING,
+            amount=Money(500, wallet_obj1.currency)
+        )
+        factories.WalletTrxFactory.create(
+            wallet=wallet_obj2,
+            trx_status=enums.TrxStatus.FINALIZED,
+            trx_type=enums.TrxType.OUTGOING,
+            amount=Money(100, wallet_obj1.currency)
+        )
+        total = api.total_balance(wallet_obj1.currency)
+        self.assertEqual(total, Money(500, wallet_obj1.currency))
+        total = api.total_balance(wallet_obj1.currency,
+                                  exclude_ids=[wallet_obj1.owner_id])
+        self.assertEqual(total, Money(400, wallet_obj1.currency))

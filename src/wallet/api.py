@@ -37,6 +37,16 @@ def list_transactions(owner_id, currency, trx_type=None, trx_status=None,
     return qs.all()[start:limit]
 
 
+def total_balance(currency, exclude_ids=None):
+    """Returns the total balance of the system"""
+    qs = models.WalletTransaction.objects.filter(
+        amount_currency=currency
+    )
+    if exclude_ids is not None:
+        qs = qs.exclude(wallet__owner_id__in=exclude_ids)
+    return qs.balance(currency)
+
+
 def get_transactions_by_ref(reference):
     """Return transactions with given reference."""
     return models.WalletTransaction.objects.filter(reference=reference)
