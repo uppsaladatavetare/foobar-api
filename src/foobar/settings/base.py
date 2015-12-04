@@ -176,3 +176,19 @@ FOOBAR_MAIN_WALLET = os.getenv('FOOBAR_MAIN_WALLET',
 FOOBAR_CASH_WALLET = os.getenv('FOOBAR_CASH_WALLET',
                                '1c61f916-a251-4dc0-a842-01aa2dee73f8')
 PURCHASE_CANCEL_MAX_DELTA = datetime.timedelta(minutes=15)
+
+# Thunderpush connection
+THUNDERPUSH_HOST = os.getenv('THUNDERPUSH_HOST', 'localhost:8080')
+THUNDERPUSH_APIKEY = os.getenv('THUNDERPUSH_APIKEY', 'foobar')
+THUNDERPUSH_PROTO = os.getenv('THUNDERPUSH_PROTO', 'http')
+
+TEMPLATE_CONTEXT_PROCESSORS = [
+    'django.contrib.auth.context_processors.auth',
+    'django.template.context_processors.debug',
+    'django.template.context_processors.i18n',
+    'django.template.context_processors.media',
+    'django.template.context_processors.static',
+    'django.template.context_processors.tz',
+    'django.contrib.messages.context_processors.messages',
+    'foobar.context_processors.thunderpush_settings',
+]

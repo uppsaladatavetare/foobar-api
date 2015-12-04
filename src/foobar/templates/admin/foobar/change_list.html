@@ -1,0 +1,21 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<script type="text/javascript">
+var THUNDERPUSH_HOST = '{{ THUNDERPUSH_HOST }}';
+var THUNDERPUSH_APIKEY = '{{ THUNDERPUSH_APIKEY }}';
+var THUNDERPUSH_PROTO = '{{ THUNDERPUSH_PROTO }}';
+</script>
+{% endblock %}
+
+{% block object-tools %}
+{{ block.super }}
+<ul class="object-tools">
+    <li>
+        <a href="{% url 'account_for_card' card_id=0 %}" class="grp-state-focus ladda-button" id="scan-card">
+            <span class="ladda-label">Scan a card</span>
+        </a>
+    </li>
+</ul>
+{% endblock %}

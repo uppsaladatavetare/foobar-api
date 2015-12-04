@@ -80,7 +80,20 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
     )
 
     class Media:
-        css = {'all': ('css/hide_admin_original.css',)}
+        css = {
+            'all': (
+                'css/hide_admin_original.css',
+                'css/scan_card.css',
+                'css/ladda-themeless.min.css',
+            )
+        }
+        js = (
+            'js/spin.min.js',
+            'js/ladda.min.js',
+            'js/sock.js',
+            'js/thunderpush.js',
+            'js/scan-card.js',
+        )
 
     def balance(self, obj):
         _, balance = wallet_api.get_balance(obj.id)
