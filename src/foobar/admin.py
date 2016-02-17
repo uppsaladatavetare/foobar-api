@@ -108,13 +108,30 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
     wallet_link.allow_tags = True
 
 
+class PaymentTypeFilter(admin.SimpleListFilter):
+    title = _('payment type')
+    parameter_name = 'payment_type'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('cash', _('Cash')),
+            ('foocard', _('FooCard')),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'cash':
+            return queryset.filter(account=None)
+        elif self.value() == 'foocard':
+            return queryset.exclude(account=None)
+
+
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
     list_display = ('id', 'account', 'status', 'amount', 'date_created',)
     readonly_fields = ('id', 'account', 'amount', 'date_created', 'status',
                        'date_modified')
     inlines = (PurchaseItemInline,)
-    list_filter = ('status',)
+    list_filter = ('status', PaymentTypeFilter,)
     change_list_template = 'admin/purchase/list.html'
     date_hierarchy = 'date_created'
     actions = ['cancel_purchases']
