@@ -148,7 +148,7 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
             F('items__amount') * F('items__qty'), output_field=DecimalField()
         )
         qs = qs.aggregate(total=Sum(expr))
-        return Money(qs['total'], settings.DEFAULT_CURRENCY)
+        return Money(qs['total'] or 0, settings.DEFAULT_CURRENCY)
 
     def changelist_view(self, request, extra_context=None):
         response = super().changelist_view(request, extra_context)
