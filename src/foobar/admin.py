@@ -127,8 +127,9 @@ class PaymentTypeFilter(admin.SimpleListFilter):
 
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'account', 'status', 'amount', 'date_created',)
-    readonly_fields = ('id', 'account', 'amount', 'date_created', 'status',
+    list_display = ('id', 'status', 'amount', 'date_created',)
+    readonly_fields = ('id', 'amount', 'date_created',
+                       'status',
                        'date_modified')
     inlines = (PurchaseItemInline,)
     list_filter = ('status', PaymentTypeFilter,)
@@ -159,6 +160,13 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
             msg = _('Canceled %d purchase(s).') % count
         return self.message_user(request, msg)
     cancel_purchases.short_description = _('Cancel purchases')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(purchase_sum=Sum('items__amount'))
+
+    def amount(self, obj):
+        return Money(obj.purchase_sum, settings.DEFAULT_CURRENCY)
 
     def aggregated_sum(self, qs):
         expr = ExpressionWrapper(
