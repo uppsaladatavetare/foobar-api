@@ -8,6 +8,7 @@ class WalletTest(TestCase):
     def test_get_wallet(self):
         wallet_obj = factories.WalletFactory.create()
         item_obj = api.get_wallet(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(wallet_obj.balance, factories.WalletFactory.balance)
         self.assertIsNotNone(item_obj)
         self.assertEqual(models.Wallet.objects.count(), 1)
 

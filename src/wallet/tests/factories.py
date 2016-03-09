@@ -14,7 +14,7 @@ class WalletFactory(factory.django.DjangoModelFactory):
         model = models.Wallet
 
     owner_id = factory.Sequence(lambda n: str(uuid.uuid4()))
-    currency = 'SEK'
+    balance = Money(0, 'SEK')
 
 
 class WalletTrxFactory(factory.django.DjangoModelFactory):

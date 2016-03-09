@@ -9,10 +9,19 @@ from . import enums
 
 class Wallet(UUIDModel):
     owner_id = models.CharField(max_length=128)
-    currency = CurrencyField(default=settings.DEFAULT_CURRENCY)
+    balance = MoneyField(
+        default=Money(0, settings.DEFAULT_CURRENCY),
+        max_digits=10,
+        decimal_places=2,
+        default_currency=settings.DEFAULT_CURRENCY
+    )
 
     class Meta:
-        unique_together = ('owner_id', 'currency',)
+        unique_together = ('owner_id', 'balance_currency',)
+
+    @property
+    def currency(self):
+        return self.balance_currency
 
 
 class WalletTrxsQuerySet(models.QuerySet):
@@ -54,3 +63,24 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
     reference = models.CharField(max_length=128, blank=True, null=True)
 
     objects = WalletTrxsQuerySet.as_manager()
+
+    @property
+    def signed_amount(self):
+        """Returns the amount in a signed form based on the trx type"""
+        if self.trx_type == enums.TrxType.INCOMING:
+            return self.amount
+        else:
+            return -self.amount
+
+    @property
+    def countable(self):
+        """Returns a boolean depending on if the transactions counts or not.
+
+        For example, rejected transactions does not contribute to
+        the wallet balance.
+        """
+        if self.trx_type == enums.TrxType.INCOMING:
+            return self.trx_status == enums.TrxStatus.FINALIZED
+        else:
+            return self.trx_status in [enums.TrxStatus.PENDING,
+                                       enums.TrxStatus.FINALIZED]

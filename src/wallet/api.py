@@ -9,7 +9,7 @@ def get_wallet(owner_id, currency):
     """
     obj, created = models.Wallet.objects.get_or_create(
         owner_id=owner_id,
-        currency=currency
+        balance_currency=currency
     )
     return obj
 
@@ -21,8 +21,7 @@ def get_balance(owner_id, currency):
     in the wallet.
     """
     wallet_obj = get_wallet(owner_id, currency)
-    qs = models.Wallet.objects.get(id=wallet_obj.id).transactions
-    return wallet_obj, qs.balance()
+    return wallet_obj, wallet_obj.balance
 
 
 def list_transactions(owner_id, currency, trx_type=None, trx_status=None,
