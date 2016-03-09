@@ -1,10 +1,16 @@
 from django.db import models
 from django.conf import settings
-from djmoney.models.fields import MoneyField, CurrencyField
+from djmoney.models.fields import MoneyField
 from moneyed import Money
 from bananas.models import TimeStampedModel, UUIDModel
 from enumfields import EnumIntegerField
 from . import enums
+
+
+class WalletQuerySet(models.QuerySet):
+    def sum(self, currency=None):
+        amount = self.aggregate(balance=models.Sum('balance'))['balance']
+        return Money(amount or 0, currency or settings.DEFAULT_CURRENCY)
 
 
 class Wallet(UUIDModel):
@@ -15,6 +21,8 @@ class Wallet(UUIDModel):
         decimal_places=2,
         default_currency=settings.DEFAULT_CURRENCY
     )
+
+    objects = WalletQuerySet.as_manager()
 
     class Meta:
         unique_together = ('owner_id', 'balance_currency',)

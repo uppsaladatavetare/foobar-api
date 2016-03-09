@@ -1,4 +1,6 @@
 from django.db import transaction
+from django.db.models import Sum
+from moneyed import Money
 from . import models, enums, exceptions
 
 
@@ -38,12 +40,10 @@ def list_transactions(owner_id, currency, trx_type=None, trx_status=None,
 
 def total_balance(currency, exclude_ids=None):
     """Returns the total balance of the system"""
-    qs = models.WalletTransaction.objects.filter(
-        amount_currency=currency
-    )
+    qs = models.Wallet.objects.filter(balance_currency=currency)
     if exclude_ids is not None:
-        qs = qs.exclude(wallet__owner_id__in=exclude_ids)
-    return qs.balance(currency)
+        qs = qs.exclude(owner_id__in=exclude_ids)
+    return qs.sum(currency)
 
 
 def get_transactions_by_ref(reference):
