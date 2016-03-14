@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.conf import settings
-from foobar import api
+from foobar import api, enums
 from foobar.wallet import api as wallet_api
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
@@ -43,7 +43,8 @@ class FoobarAPITest(TestCase):
             (product_obj1.id, 3),
             (product_obj2.id, 1),
         ]
-        api.purchase(account_obj.id, products)
+        purchase_obj = api.purchase(account_obj.id, products)
+        self.assertEqual(purchase_obj.amount, Money(69, 'SEK'))
         product_obj1.refresh_from_db()
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty, -3)
@@ -77,6 +78,8 @@ class FoobarAPITest(TestCase):
         ]
         purchase_obj = api.purchase(account_obj.id, products)
         api.cancel_purchase(purchase_obj.id)
+        purchase_obj, _ = api.get_purchase(purchase_obj.id)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.CANCELED)
         product_obj1.refresh_from_db()
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty, 0)
@@ -103,6 +106,8 @@ class FoobarAPITest(TestCase):
         ]
         purchase_obj = api.purchase(None, products)
         api.cancel_purchase(purchase_obj.id)
+        purchase_obj, _ = api.get_purchase(purchase_obj.id)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.CANCELED)
         product_obj1.refresh_from_db()
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty, 0)

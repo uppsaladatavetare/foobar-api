@@ -127,10 +127,9 @@ class PaymentTypeFilter(admin.SimpleListFilter):
 
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'status', 'amount', 'date_created',)
-    readonly_fields = ('id', 'amount', 'date_created',
-                       'status',
-                       'date_modified')
+    list_display = ('id', 'foocard', 'status', '_amount', 'date_created',)
+    readonly_fields = ('id', 'amount', 'date_created', 'account',
+                       'status', 'date_modified')
     inlines = (PurchaseItemInline,)
     list_filter = ('status', PaymentTypeFilter,)
     change_list_template = 'admin/purchase/list.html'
@@ -144,6 +143,13 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
         actions = super().get_actions(request)
         del actions['delete_selected']
         return actions
+
+    def _amount(self, obj):
+        return obj.amount
+
+    def foocard(self, obj):
+        return obj.account_id is None
+    foocard.boolean = True
 
     def cancel_purchases(self, request, queryset):
         failed = 0
@@ -161,18 +167,8 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
         return self.message_user(request, msg)
     cancel_purchases.short_description = _('Cancel purchases')
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.annotate(purchase_sum=Sum('items__amount'))
-
-    def amount(self, obj):
-        return Money(obj.purchase_sum, settings.DEFAULT_CURRENCY)
-
     def aggregated_sum(self, qs):
-        expr = ExpressionWrapper(
-            F('items__amount') * F('items__qty'), output_field=DecimalField()
-        )
-        qs = qs.aggregate(total=Sum(expr))
+        qs = qs.aggregate(total=Sum('amount'))
         return Money(qs['total'] or 0, settings.DEFAULT_CURRENCY)
 
     def changelist_view(self, request, extra_context=None):

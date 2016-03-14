@@ -37,15 +37,14 @@ class Purchase(UUIDModel, TimeStampedModel):
                                 null=True, blank=True)
     status = EnumIntegerField(enums.PurchaseStatus,
                               default=enums.PurchaseStatus.FINALIZED)
+    amount = MoneyField(
+        max_digits=10,
+        decimal_places=2,
+        default_currency=settings.DEFAULT_CURRENCY
+    )
 
     class Meta:
         ordering = ['-date_created']
-
-    @property
-    def amount(self):
-        qs = self.items.all()
-        zero_money = Money(0, settings.DEFAULT_CURRENCY)
-        return sum((item.amount * item.qty for item in qs), zero_money)
 
     @property
     def deletable(self):
