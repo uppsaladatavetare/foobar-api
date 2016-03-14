@@ -1,7 +1,12 @@
 {% extends "admin/base.html" %}
+{% load static %}
 
 {% block title %}{{ title }} | Foobar{% endblock %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">Foobar</a></h1>
+<h1 id="site-name"><a href="{% url 'admin:index' %}">FOOBAR</a></h1>
+{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/admin.css' %}">
 {% endblock %}

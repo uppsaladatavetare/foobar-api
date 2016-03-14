@@ -66,8 +66,9 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
         decimal_places=2,
         default_currency=settings.DEFAULT_CURRENCY
     )
-    trx_type = EnumIntegerField(enums.TrxType)
-    trx_status = EnumIntegerField(enums.TrxStatus)
+    trx_type = EnumIntegerField(enums.TrxType, default=enums.TrxType.INCOMING)
+    trx_status = EnumIntegerField(enums.TrxStatus,
+                                  default=enums.TrxStatus.FINALIZED)
     reference = models.CharField(max_length=128, blank=True, null=True)
 
     objects = WalletTrxsQuerySet.as_manager()
