@@ -7,7 +7,6 @@ from django.utils import timezone
 from enumfields import EnumIntegerField
 from djmoney.models.fields import MoneyField
 from bananas.models import UUIDModel, TimeStampedModel
-from moneyed import Money
 from shop import api as product_api
 from . import enums
 

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.core.urlresolvers import reverse
 from django.conf import settings
-from django.db.models import F, Sum, ExpressionWrapper, DecimalField
+from django.db.models import Sum
 from django.utils.translation import ugettext_lazy as _
 from foobar.wallet import api as wallet_api
 from shop import api as shop_api
@@ -145,6 +145,8 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
         return actions
 
     def _amount(self, obj):
+        # An ugly trick to force the Django admin to format the money
+        # field properly.
         return obj.amount
 
     def foocard(self, obj):

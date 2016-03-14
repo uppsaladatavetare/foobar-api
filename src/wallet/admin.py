@@ -1,7 +1,5 @@
 from django.contrib import admin
-from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
-from wallet import api as wallet_api
 from . import models
 
 
@@ -41,7 +39,7 @@ class WalletTransactionCreatorInline(admin.TabularInline):
 
 @admin.register(models.Wallet)
 class WalletAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('owner_id', 'balance',)
+    list_display = ('owner_id', '_balance',)
     readonly_fields = ('owner_id', 'balance',)
     inlines = (
         WalletTransactionCreatorInline,
@@ -59,6 +57,11 @@ class WalletAdmin(ReadOnlyMixin, admin.ModelAdmin):
             )
         })
     )
+
+    def _balance(self, obj):
+        # An ugly trick to force the Django admin to format the money
+        # field properly.
+        return obj.balance
 
     class Media:
         css = {'all': ('css/hide_admin_original.css',)}

@@ -7,7 +7,7 @@ help:
 	@echo '  clean	Removes *.pyc files.'
 
 lint:
-	cd src && flake8 --exclude=migrations .
+	cd src && flake8 --exclude=migrations,settings .
 
 test:
 	cd src && python manage.py test --settings=foobar.settings.test
