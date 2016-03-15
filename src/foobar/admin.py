@@ -202,7 +202,8 @@ def each_context(request):
         'cash_balance': cash_balance,
         'main_wallet': mw_obj,
         'main_balance': main_balance,
-        'credit_account_balance': total_balance
+        'credit_account_balance': total_balance,
+        'swish_number': settings.SWISH_NUMBER
     })
     return ctx
 

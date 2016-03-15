@@ -177,6 +177,8 @@ FOOBAR_CASH_WALLET = os.getenv('FOOBAR_CASH_WALLET',
                                '1c61f916-a251-4dc0-a842-01aa2dee73f8')
 PURCHASE_CANCEL_MAX_DELTA = datetime.timedelta(minutes=15)
 
+SWISH_NUMBER = os.getenv('SWISH_NUMBER', '123 456 78 90')
+
 # Thunderpush connection
 THUNDERPUSH_HOST = os.getenv('THUNDERPUSH_HOST', 'localhost:8080')
 THUNDERPUSH_APIKEY = os.getenv('THUNDERPUSH_APIKEY', 'foobar')
