@@ -21,3 +21,6 @@ pytz==2015.7
 # production & dev
 psycopg2==2.6.1
 raven==5.8.1
+
+# lint
+flake8==2.5.4
