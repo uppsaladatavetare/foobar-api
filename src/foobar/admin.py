@@ -61,6 +61,7 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
     list_display = ('id', 'name', 'user', 'card_id', 'balance')
     readonly_fields = ('id', 'wallet_link', 'date_created', 'date_modified')
     inlines = (PurchaseInline,)
+    search_fields = ('name', 'card_id',)
     fieldsets = (
         (None, {
             'fields': (
