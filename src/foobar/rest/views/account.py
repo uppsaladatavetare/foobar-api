@@ -18,6 +18,8 @@ class AccountAPI(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         account_obj = foobar.api.get_account(card_id=pk)
+        if account_obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = AccountSerializer(account_obj)
         return Response(
             data=serializer.data,

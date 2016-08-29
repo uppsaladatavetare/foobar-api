@@ -1,25 +1,43 @@
 from django.test import TestCase
 from django.conf import settings
-from foobar import api, enums
+from foobar import api, enums, models
 from foobar.wallet import api as wallet_api
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
 from wallet.enums import TrxStatus
-from .factories import AccountFactory
+from .factories import AccountFactory, CardFactory
 from moneyed import Money
 
 
 class FoobarAPITest(TestCase):
+    def test_get_card(self):
+        # Retrieve an non-existent account
+        obj1 = api.get_card(1337)
+        self.assertIsNone(obj1)
+
+        # Create an account
+        CardFactory.create(number=1337)
+        obj2 = api.get_card(1337)
+        self.assertIsNotNone(obj2)
+        self.assertIsNotNone(obj2.date_used)
+
+        date_used = obj2.date_used
+        obj2 = api.get_card(1337)
+        self.assertGreater(obj2.date_used, date_used)
 
     def test_get_account(self):
+        # Retrieve an non-existent account
         obj1 = api.get_account(card_id=1337)
-        self.assertIsNotNone(obj1)
+        self.assertIsNone(obj1)
+
+        # Create an account
+        CardFactory.create(number=1337)
         obj2 = api.get_account(card_id=1337)
+
         self.assertIsNotNone(obj2)
-        self.assertEqual(obj1.id, obj2.id)
-        obj3 = api.get_account(card_id=7331)
-        self.assertIsNotNone(obj3)
-        self.assertNotEqual(obj1.id, obj3.id)
+
+        account_objs = models.Account.objects.filter(id=obj2.id)
+        self.assertEqual(account_objs.count(), 1)
 
     def test_purchase(self):
         account_obj = AccountFactory.create()

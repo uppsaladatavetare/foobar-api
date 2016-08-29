@@ -6,6 +6,7 @@ from django.core.files.storage import FileSystemStorage
 from bananas.models import TimeStampedModel, UUIDModel
 from enumfields import EnumIntegerField
 from djmoney.models.fields import MoneyField
+from utils.models import ScannerField
 from . import enums, querysets
 
 
@@ -38,7 +39,7 @@ class ProductCategory(UUIDModel):
 
 class Product(UUIDModel, TimeStampedModel):
     name = models.CharField(max_length=64)
-    code = models.CharField(max_length=13, unique=True)
+    code = ScannerField(scanner='products', max_length=13, unique=True)
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(blank=True, null=True,
                               upload_to=generate_product_filename,

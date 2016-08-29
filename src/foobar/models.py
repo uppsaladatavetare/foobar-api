@@ -8,6 +8,7 @@ from enumfields import EnumIntegerField
 from djmoney.models.fields import MoneyField
 from bananas.models import UUIDModel, TimeStampedModel
 from shop import api as product_api
+from utils.models import ScannerField
 from . import enums
 
 
@@ -16,18 +17,26 @@ class Account(UUIDModel, TimeStampedModel):
     name = models.CharField(null=True, blank=True, max_length=128)
     email = models.CharField(null=True, blank=True, max_length=128)
 
+    def __str__(self):
+        return str(self.id)
+
+
+class Card(UUIDModel, TimeStampedModel):
+    account = models.ForeignKey(Account)
+
     # The card id is a uid from a mifare classic 1k card and is supposed
     # to be 8 bytes long.
-    card_id = models.CharField(unique=True, max_length=20)
+    number = ScannerField(scanner='cards', unique=True, max_length=20)
+    date_used = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         try:
-            int(self.card_id)
+            int(self.number)
         except ValueError:
             raise ValidationError(_('The card id should be an integer.'))
 
     def __str__(self):
-        return str(self.id)
+        return 'Card {o.account}: {o.number}'.format(o=self)
 
 
 class Purchase(UUIDModel, TimeStampedModel):

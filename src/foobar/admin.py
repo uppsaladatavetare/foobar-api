@@ -56,19 +56,27 @@ class PurchaseItemInline(ReadOnlyMixin, admin.TabularInline):
     link.allow_tags = True
 
 
+class CardInline(admin.TabularInline):
+    model = models.Card
+    fields = ('number', 'date_created',)
+    readonly_fields = ('date_created',)
+    ordering = ('-date_created',)
+    show_change_link = True
+    extra = 0
+
+
 @admin.register(models.Account)
 class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'name', 'user', 'card_id', 'balance')
+    list_display = ('id', 'name', 'user', 'balance')
     readonly_fields = ('id', 'wallet_link', 'date_created', 'date_modified')
-    inlines = (PurchaseInline,)
-    search_fields = ('name', 'card_id',)
+    inlines = (CardInline, PurchaseInline,)
+    search_fields = ('name',)
     fieldsets = (
         (None, {
             'fields': (
                 'id',
                 'user',
                 'name',
-                'card_id',
             )
         }),
         ('Additional information', {

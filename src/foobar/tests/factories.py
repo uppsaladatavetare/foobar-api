@@ -6,4 +6,10 @@ class AccountFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Account
 
-    card_id = factory.fuzzy.FuzzyInteger(0, (1 << 32) - 1)
+
+class CardFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Card
+
+    account = factory.SubFactory(AccountFactory)
+    number = factory.fuzzy.FuzzyInteger(0, (1 << 32) - 1)

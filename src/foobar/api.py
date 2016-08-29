@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
-from .models import Account, Purchase, PurchaseItem
+from django.utils import timezone
+from .models import Account, Card, Purchase, PurchaseItem
 from foobar.wallet import api as wallet_api
 from shop import api as shop_api
 from shop import enums as shop_enums
@@ -10,11 +11,22 @@ from .exceptions import NotCancelableException
 from . import enums
 
 
+def get_card(card_id):
+    try:
+        card_obj = Card.objects.get(
+            number=card_id
+        )
+        card_obj.date_used = timezone.now()
+        card_obj.save()
+        return card_obj
+    except Card.DoesNotExist:
+        return None
+
+
 def get_account(card_id):
-    obj, _ = Account.objects.get_or_create(
-        card_id=card_id
-    )
-    return obj
+    card_obj = get_card(card_id)
+    if card_obj is not None:
+        return card_obj.account
 
 
 @transaction.atomic

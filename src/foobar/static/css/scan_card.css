@@ -1,12 +1,20 @@
-#scan-card[data-loading] {
+.scan-btn[data-loading], #scan-card[data-loading] {
     padding-right: 30px !important;
 }
 
-#scan-card .ladda-spinner {
-    right: -15px;
+.scan-btn .ladda-spinner, #scan-card .ladda-spinner {
+    right: -15px !important;
 }
 
-#scan-card[disabled] {
-    background-color: #bbb;
+.scan-btn[disabled], #scan-card[disabled] {
+    background-color: #bbb !important;
     cursor: default;
+}
+
+.inline-object-tools {
+    display: inline-block;
+	vertical-align: middle;
+	padding-left: 0 !important;
+	margin-left: 0 !important;
+	margin-top: -4px !important;
 }
