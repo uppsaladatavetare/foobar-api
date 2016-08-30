@@ -103,7 +103,7 @@ var Thunder = new function() {
 
 
     this.connect = function(server, apikey, channels, options) {
-        this.server = "http://" + server + "/connect";
+        this.server = server + "/connect";
         this.apikey = apikey;
         this.channels = channels;
         this.reconnect_tries = 0;
