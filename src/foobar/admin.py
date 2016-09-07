@@ -119,9 +119,9 @@ class AccountAdmin(admin.ModelAdmin):
     wallet_link.allow_tags = True
 
 
-class PaymentTypeFilter(admin.SimpleListFilter):
-    title = _('payment type')
-    parameter_name = 'payment_type'
+class PaymentMethodFilter(admin.SimpleListFilter):
+    title = _('payment method')
+    parameter_name = 'payment_method'
 
     def lookups(self, request, model_admin):
         return (
@@ -138,11 +138,11 @@ class PaymentTypeFilter(admin.SimpleListFilter):
 
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'foocard', 'status', '_amount', 'date_created',)
+    list_display = ('id', 'payment_method', 'status', '_amount', 'date_created',)
     readonly_fields = ('id', 'amount', 'date_created', 'account',
                        'status', 'date_modified')
     inlines = (PurchaseItemInline,)
-    list_filter = ('status', PaymentTypeFilter,)
+    list_filter = ('status', PaymentMethodFilter,)
     change_list_template = 'admin/purchase/list.html'
     date_hierarchy = 'date_created'
     actions = ['cancel_purchases']
@@ -159,10 +159,6 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
         # An ugly trick to force the Django admin to format the money
         # field properly.
         return obj.amount
-
-    def foocard(self, obj):
-        return obj.account_id is None
-    foocard.boolean = True
 
     def cancel_purchases(self, request, queryset):
         failed = 0

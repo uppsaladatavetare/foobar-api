@@ -59,6 +59,9 @@ class Purchase(UUIDModel, TimeStampedModel):
         max_delta = settings.PURCHASE_CANCEL_MAX_DELTA
         return timezone.now() - self.date_created <= max_delta
 
+    def payment_method(self):
+        return _('Cash') if self.account is None else _('FooCard')
+
     def __str__(self):
         return str(self.id)
 
