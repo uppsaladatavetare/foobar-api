@@ -66,7 +66,7 @@ class CardInline(admin.TabularInline):
 
 
 @admin.register(models.Account)
-class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
+class AccountAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'user', 'balance')
     readonly_fields = ('id', 'wallet_link', 'date_created', 'date_modified')
     inlines = (CardInline, PurchaseInline,)
@@ -105,15 +105,17 @@ class AccountAdmin(ReadOnlyMixin, admin.ModelAdmin):
         )
 
     def balance(self, obj):
-        _, balance = wallet_api.get_balance(obj.id)
-        return balance
+        if obj.id is not None:
+            _, balance = wallet_api.get_balance(obj.id)
+            return balance
 
     def wallet_link(self, obj):
-        wallet_obj = wallet_api.get_wallet(obj.id)
-        return '<a href="{}">{}</a>'.format(
-            reverse('admin:wallet_wallet_change', args=(wallet_obj.id,)),
-            self.balance(obj)
-        )
+        if obj.id is not None:
+            wallet_obj = wallet_api.get_wallet(obj.id)
+            return '<a href="{}">{}</a>'.format(
+                reverse('admin:wallet_wallet_change', args=(wallet_obj.id,)),
+                self.balance(obj)
+            )
     wallet_link.allow_tags = True
 
 
