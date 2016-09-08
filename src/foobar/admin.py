@@ -138,7 +138,8 @@ class PaymentMethodFilter(admin.SimpleListFilter):
 
 @admin.register(models.Purchase)
 class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('id', 'payment_method', 'status', '_amount', 'date_created',)
+    list_display = ('id', 'payment_method', 'status', '_amount',
+                    'date_created',)
     readonly_fields = ('id', 'amount', 'date_created', 'account',
                        'status', 'date_modified')
     inlines = (PurchaseItemInline,)
