@@ -19,3 +19,6 @@ notifications:
     on_failure: always
     rooms:
       secure: "r6d9WIlSOs+1ouByQKWvH/xVc19xhui3wqD5ghYs4ksMJX2kiN4t+n1Tan9wHjRmkLjvAszOZV0q/mVYdrgdZZkAPQCnye39WsSZyt8EDMKkmib9jBvT8S1Y3n9RaeJ+WQaT0k5kR9IpsjaWTdqH4esX3EJR5MUvrbzt5eKB7o+/mg1AH4RCsl9x+UhSaThtwqjGQd0mD0gP2bZJv2Vsgg4458DPhdGUJrgYjycetG+jACmgzIJT+Gk3RgiilrgltNnJsyMtxq6Y0P90oYlefcA6Os5EWvxrQ24RV6C+YI991JUELsREWCQMy5K9Jm+3C7l72T/ONrz2zXVzhkyvwvMBOje1wwBOlZN8juOhU9TvPh5vv4JWSYsWlyBH+rsXlePDNZs8+pnPb5XOS0PAth+WjSYt6i4xpNp0GYTy0ZM0JokGbS701scov0zCaRoQsfzQlGCZtoKzhuPfNgRE1kz16fEbBeaHjlWCUia/lVDnqdEvpjDXolqhYyt3eapWOuTfK9aIvvkBn8azU4t6o2lF1WIJACbVik8at8GJQ9ZrfiP+clHWCwG4ny4NlMgUKX3FB523mhL/aOU0ea4SuI2cVfIHBss1+hw25vBYwgy7po2u8Yr6cuxaqHqKbyfDBAf/pbf2AGUNC6za4iSzQTtQqPz6wneWLAo1bnHmO+Q="
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
