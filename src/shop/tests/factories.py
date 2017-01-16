@@ -14,7 +14,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Product #{0}'.format(n))
     code = factory.Sequence(lambda n: '1{0:012d}'.format(n))
-    price = FuzzyMoney(0, 100000)
+    price = FuzzyMoney(10, 50)
     active = True
 
 
@@ -32,3 +32,37 @@ class ProductCategoryFactory(factory.django.DjangoModelFactory):
         model = models.ProductCategory
 
     name = factory.Sequence(lambda n: 'Category #{0}'.format(n))
+
+
+class SupplierFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Supplier
+
+
+class SupplierProductFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.SupplierProduct
+
+    supplier = factory.SubFactory(SupplierFactory)
+    product = factory.SubFactory(ProductFactory)
+    name = factory.Sequence(lambda n: 'Product #{0}'.format(n))
+    sku = factory.Sequence(lambda n: '1{0:010d}'.format(n))
+    price = FuzzyMoney(10, 50)
+
+
+class DeliveryFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Delivery
+
+    supplier = factory.SubFactory(SupplierFactory)
+    report = 'dummy'
+
+
+class DeliveryItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.DeliveryItem
+
+    delivery = factory.SubFactory(SupplierFactory)
+    supplier_product = factory.SubFactory(SupplierProductFactory)
+    qty = factory.fuzzy.FuzzyInteger(1, 50)
+    price = FuzzyMoney(10, 50)

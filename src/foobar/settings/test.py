@@ -6,3 +6,5 @@ DATABASES = {
         'NAME': ':memory:',
     },
 }
+
+INSTALLED_APPS += ('shop.tests',)
