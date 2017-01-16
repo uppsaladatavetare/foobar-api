@@ -15,6 +15,7 @@ class WalletTransactionViewerInline(ReadOnlyMixin, admin.TabularInline):
     model = models.WalletTransaction
     fields = ('id', 'trx_type', 'trx_status', 'amount', 'reference',
               'date_created')
+    max_num = 25
     readonly_fields = ('id', 'trx_type', 'trx_status', 'amount', 'reference',
                        'date_created')
     ordering = ('-date_created',)

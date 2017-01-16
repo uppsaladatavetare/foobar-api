@@ -15,6 +15,7 @@ class ProductTransactionViewerInline(admin.TabularInline):
     ordering = ('-date_created',)
     verbose_name = _('View transaction')
     verbose_name_plural = _('View transactions')
+    max_num = 25
 
     def has_add_permission(self, request, obj=None):
         return False
