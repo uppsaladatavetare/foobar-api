@@ -26,11 +26,7 @@ class ProductAPI(viewsets.ViewSet):
 
     def list(self, request):
         serializer = ProductParamSerializer(data=request.GET)
-        if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer.is_valid(raise_exception=True)
         product_objs = shop.api.list_products(**serializer.validated_data)
         serializer = ProductSerializer(product_objs, many=True)
         return Response(serializer.data)

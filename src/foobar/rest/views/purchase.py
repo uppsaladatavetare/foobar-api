@@ -15,11 +15,7 @@ class PurchaseAPI(viewsets.ViewSet):
 
     def create(self, request):
         serializer = PurchaseRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer.is_valid(raise_exception=True)
         try:
             purchase_obj = api.purchase(**serializer.as_purchase_kwargs())
         except InsufficientFunds:

@@ -39,13 +39,9 @@ class WalletAPI(viewsets.ViewSet):
         amount_
         """
         owner_serializer = WalletTrxParamsSerializer(data={'owner_id': pk})
-        if not owner_serializer.is_valid():
-            return Response(owner_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        owner_serializer.is_valid(raise_exception=True)
         deposit_serializer = WalletDepositSerializer(data=request.POST)
-        if not deposit_serializer.is_valid():
-            return Response(deposit_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        deposit_serializer.is_valid(raise_exception=True)
         wallet_api.deposit(
             owner_serializer.validated_data['owner_id'],
             deposit_serializer.validated_data['amount'],
@@ -57,13 +53,9 @@ class WalletAPI(viewsets.ViewSet):
     def withdraw(self, request, pk):
         """Withdraws money from a wallet."""
         owner_serializer = WalletTrxParamsSerializer(data={'owner_id': pk})
-        if not owner_serializer.is_valid():
-            return Response(owner_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        owner_serializer.is_valid(raise_exception=True)
         withdrawal_serializer = WalletWithdrawalSerializer(data=request.POST)
-        if not withdrawal_serializer.is_valid():
-            return Response(withdrawal_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        withdrawal_serializer.is_valid(raise_exception=True)
         try:
             wallet_api.withdraw(
                 owner_serializer.validated_data['owner_id'],
@@ -83,9 +75,7 @@ class WalletTrxAPI(viewsets.ViewSet):
     def list(self, request):
         """Retrieves all the transactions for given wallet."""
         serializer = WalletTrxParamsSerializer(data=request.GET)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         owner_id = serializer.validated_data['owner_id']
         trxs = wallet_api.list_transactions(owner_id)
         serializer = WalletTrxSerializer(trxs, many=True)

@@ -12,11 +12,7 @@ class AccountAPI(viewsets.ViewSet):
 
     def retrieve(self, request, pk):
         serializer = AccountQuerySerializer(data={'card_id': pk})
-        if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer.is_valid(raise_exception=True)
         account_obj = foobar.api.get_account(card_id=pk)
         if account_obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
