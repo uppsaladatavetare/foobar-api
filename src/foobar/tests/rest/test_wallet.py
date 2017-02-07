@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse_lazy as reverse
 from rest_framework import status
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
 from wallet.enums import TrxType, TrxStatus

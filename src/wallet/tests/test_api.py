@@ -130,8 +130,8 @@ class WalletTest(TestCase):
         self.assertEqual(balance, Money(100, wallet_obj.currency))
 
     def test_transfer(self):
-        wallet_obj1 = factories.WalletFactory.create(currency='SEK')
-        wallet_obj2 = factories.WalletFactory.create(currency='SEK')
+        wallet_obj1 = factories.WalletFactory.create(balance_currency='SEK')
+        wallet_obj2 = factories.WalletFactory.create(balance_currency='SEK')
         factories.WalletTrxFactory.create(
             wallet=wallet_obj1,
             trx_status=enums.TrxStatus.FINALIZED,

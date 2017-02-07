@@ -5,7 +5,7 @@ from .views.product import ProductAPI, ProductCategoryAPI
 from .views.account import AccountAPI
 from .views.purchase import PurchaseAPI
 
-router = routers.SimpleRouter()
+router = routers.DefaultRouter()
 router.register(r'wallets', WalletAPI, 'wallets')
 router.register(r'wallet_trxs', WalletTrxAPI, 'wallet_trxs')
 router.register(r'products', ProductAPI, 'products')

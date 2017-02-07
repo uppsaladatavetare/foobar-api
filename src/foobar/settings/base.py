@@ -22,20 +22,19 @@ SECRET_KEY = os.getenv('SECRET_KEY',
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', True)
-TEMPLATE_DEBUG = os.getenv('TEMPLATE_DEBUG', True)
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 
 # Application definition
 INSTALLED_APPS = (
+    'rest_framework',
+    'rest_framework_swagger',
+
     'shop',
     'wallet',
     'foobar',
     'authtoken',
-
-    'rest_framework',
-    'rest_framework_swagger',
 
     'raven.contrib.django.raven_compat',
 
@@ -184,13 +183,43 @@ THUNDERPUSH_HOST = os.getenv('THUNDERPUSH_HOST', 'localhost:8080')
 THUNDERPUSH_APIKEY = os.getenv('THUNDERPUSH_APIKEY', 'foobar')
 THUNDERPUSH_PROTO = os.getenv('THUNDERPUSH_PROTO', 'http')
 
-TEMPLATE_CONTEXT_PROCESSORS = [
-    'django.contrib.auth.context_processors.auth',
-    'django.template.context_processors.debug',
-    'django.template.context_processors.i18n',
-    'django.template.context_processors.media',
-    'django.template.context_processors.static',
-    'django.template.context_processors.tz',
-    'django.contrib.messages.context_processors.messages',
-    'foobar.context_processors.thunderpush_settings',
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            # insert your TEMPLATE_DIRS here
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'debug': os.getenv('TEMPLATE_DEBUG', True),
+            'context_processors': [
+                # Insert your TEMPLATE_CONTEXT_PROCESSORS here or use this
+                # list if you haven't customized them:
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                'foobar.context_processors.thunderpush_settings',
+            ],
+        },
+    },
 ]
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'LOGIN_URL': '/',
+    'LOGOUT_URL': '/',
+    'SUPPORTED_SUBMIT_METHOD': ['get', 'post', 'put', 'delete', 'patch'],
+    'APIS_SORTER': 'alpha',
+    'VALIDATOR_URL': None,
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
+}

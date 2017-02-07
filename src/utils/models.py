@@ -5,7 +5,7 @@ from . import forms
 
 class ScannerField(models.CharField):
     def __init__(self, *args, **kwargs):
-        self.scanner = kwargs.pop('scanner')
+        self.scanner = kwargs.pop('scanner', None)
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
