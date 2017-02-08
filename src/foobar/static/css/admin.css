@@ -56,6 +56,24 @@ div.breadcrumbs a:focus, div.breadcrumbs a:hover {
     background-color: #d34a4a;
 }
 
+.paginator a:link, .paginator a:visited {
+    background: #d34a4a !important;
+}
+
+.paginator a:focus, .paginator a:hover {
+    background: #a70d0d !important;
+    cursor: pointer;
+}
+
+.paginator a.showall {
+    background: none !important;
+    color: #d34a4a !important;
+}
+
+.paginator a.showall:focus, .paginator a.showall:hover {
+    color: #a70d0d !important;
+}
+
 input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=url]:focus, input[type=number]:focus, textarea:focus, select:focus, .vTextField:focus {
     border-color: #f5c8c8;
 }

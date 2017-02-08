@@ -100,3 +100,7 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
         else:
             return self.trx_status in [enums.TrxStatus.PENDING,
                                        enums.TrxStatus.FINALIZED]
+
+    class Meta:
+        verbose_name = 'Transaction'
+        verbose_name_plural = 'Transactions'
