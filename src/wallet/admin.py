@@ -27,8 +27,8 @@ class WalletTransactionCreatorInline(admin.TabularInline):
     model = models.WalletTransaction
     fields = ('trx_type', 'trx_status', 'amount', 'reference',)
     max_num = 1
-    verbose_name = _('Add transaction')
-    verbose_name_plural = _('Add transaction')
+    verbose_name = _('Add new transaction')
+    verbose_name_plural = _('Add new transaction')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -44,7 +44,7 @@ class WalletAdmin(ReadOnlyMixin, admin.ModelAdmin):
     readonly_fields = ('owner_id', 'balance',)
     inlines = (
         WalletTransactionCreatorInline,
-        WalletTransactionViewerInline,
+        #WalletTransactionViewerInline,
     )
     fieldsets = (
         (None, {

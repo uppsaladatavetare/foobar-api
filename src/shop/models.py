@@ -256,7 +256,8 @@ class Product(UUIDModel, TimeStampedModel):
     active = models.BooleanField(default=True)
 
     # cached quantity
-    qty = models.IntegerField(default=0)
+    qty = models.IntegerField(verbose_name='quantity', default=0)
+
     objects = querysets.ProductQuerySet.as_manager()
 
     class Meta:
