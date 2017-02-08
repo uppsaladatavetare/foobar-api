@@ -1,16 +1,21 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.contrib import admin
+
+from rest_framework_swagger.views import get_swagger_view
+import foobar.views
+import rest_framework.urls
 
 from .rest.urls import router
 
-urlpatterns = patterns(
-    '',
+schema_view = get_swagger_view(title='FooBar API')
+
+urlpatterns = [
     url(r'^api/', include(router.urls, namespace='api')),
-    url(r'^docs/', include('rest_framework_swagger.urls')),
-    url(r'^api-auth/', include('rest_framework.urls',
+    url(r'^docs/', schema_view),
+    url(r'^api-auth/', include(rest_framework.urls,
         namespace='rest_framework')),
 
     url(r'^admin/foobar/account/card/(?P<card_id>\d+)',
-        'foobar.views.account_for_card', name='account_for_card'),
+        foobar.views.account_for_card, name='account_for_card'),
     url(r'^admin/', include(admin.site.urls)),
-)
+]

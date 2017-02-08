@@ -1,5 +1,5 @@
 import uuid
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse_lazy as reverse
 from rest_framework import status
 from shop.tests.factories import (
     ProductFactory,
