@@ -110,7 +110,7 @@ LOGGING = {
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
 from bananas.url import database_conf_from_url
-default_db = 'sqlite3://{}'.format(os.path.join(BASE_DIR, 'db.sqlite3'))
+default_db = 'sqlite3:///db.sqlite3'
 db_config = database_conf_from_url(os.getenv('DJANGO_DB', default_db))
 
 DATABASES = {
