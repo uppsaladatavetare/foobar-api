@@ -78,7 +78,8 @@ class DeliveryItemInline(admin.TabularInline):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('supplier_product',
-                                 'supplier_product__product')
+                                 'supplier_product__product',
+                                 'supplier_product__product__category',)
 
 
 class DeliveryForm(forms.ModelForm):
