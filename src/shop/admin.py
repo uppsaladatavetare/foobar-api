@@ -86,20 +86,21 @@ class DeliveryForm(forms.ModelForm):
     def clean(self):
         supplier = self.cleaned_data.get('supplier')
         report = self.cleaned_data.get('report')
-        try:
-            # `report` contain most likely an in-memory file.
-            # Save it to a temporary file, then try to parse it.
-            with tempfile.NamedTemporaryFile() as f:
-                f.write(report.read())
-                items = api.parse_report(supplier.internal_name, f.name)
-        except SupplierAPIException as e:
-            raise forms.ValidationError(
-                _('Report parse error: %s') % str(e)
-            )
-        if not items:
-            raise forms.ValidationError(
-                _('No products could be imported from the report file.')
-            )
+        if report is not None and supplier is not None:
+            try:
+                # `report` contain most likely an in-memory file.
+                # Save it to a temporary file, then try to parse it.
+                with tempfile.NamedTemporaryFile() as f:
+                    f.write(report.read())
+                    items = api.parse_report(supplier.internal_name, f.name)
+            except SupplierAPIException as e:
+                raise forms.ValidationError(
+                    _('Report parse error: %s') % str(e)
+                )
+            if not items:
+                raise forms.ValidationError(
+                    _('No products could be imported from the report file.')
+                )
         return self.cleaned_data
 
 
