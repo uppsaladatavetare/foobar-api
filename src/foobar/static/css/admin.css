@@ -59,3 +59,8 @@ div.breadcrumbs a:focus, div.breadcrumbs a:hover {
 input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=url]:focus, input[type=number]:focus, textarea:focus, select:focus, .vTextField:focus {
     border-color: #f5c8c8;
 }
+
+.object-tools a[disabled] {
+    background-color: #bbb !important;
+    cursor: default;
+}

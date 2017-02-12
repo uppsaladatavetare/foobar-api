@@ -1,10 +1,13 @@
 language: python
 
+sudo: required
+
 python:
   - "3.4"
 
 install:
   - pip install -r requirements/test.txt
+  - sudo apt-get install poppler-utils
 
 env:
   matrix:

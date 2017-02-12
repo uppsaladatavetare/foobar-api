@@ -183,6 +183,9 @@ THUNDERPUSH_HOST = os.getenv('THUNDERPUSH_HOST', 'localhost:8080')
 THUNDERPUSH_APIKEY = os.getenv('THUNDERPUSH_APIKEY', 'foobar')
 THUNDERPUSH_PROTO = os.getenv('THUNDERPUSH_PROTO', 'http')
 
+NARLIVS_USERNAME = os.getenv('NARLIVS_USERNAME', '')
+NARLIVS_PASSWORD = os.getenv('NARLIVS_PASSWORD', '')
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

@@ -4,6 +4,12 @@
 
 This repository contains the backend for the FooBar kiosk and inventory system.
 
+## Requirements
+
+- Python 3.4+
+- Djanggo 1.9+
+- [pdftotext](https://linux.die.net/man/1/pdftotext) for delivery report parsing
+
 ## Setup
 
     $ git clone git@github.com:uppsaladatavetare/foobar-api.git

@@ -97,7 +97,7 @@ def cancel_purchase(purchase_id, force=False):
     purchase_obj.save()
     # Cancel related shop item transactions
     for item_trx_obj in purchase_obj.items.all():
-        trx_objs = shop_api.get_product_transactions_by_ref(item_trx_obj.id)
+        trx_objs = shop_api.get_product_transactions_by_ref(item_trx_obj)
         # Only one transaction with given reference should exist
         assert len(trx_objs) == 1
         shop_api.cancel_product_transaction(trx_objs[0].id)

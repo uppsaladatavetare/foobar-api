@@ -13,3 +13,4 @@ six==1.9.0
 requests==2.8.1
 pytz==2015.7
 raven==5.8.1
+pynarlivs==0.9.0
