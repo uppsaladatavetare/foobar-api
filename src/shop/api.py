@@ -118,13 +118,18 @@ def get_supplier_product(supplier_id, sku):
     return product_obj
 
 
+def parse_report(supplier_internal_name, report_path):
+    """Parses a report file and returns parsed items."""
+    supplier_api = suppliers.get_supplier_api(supplier_internal_name)
+    return supplier_api.parse_delivery_report(report_path)
+
+
 @transaction.atomic
 def populate_delivery(delivery_id):
     """Populates the delivery with products based on the imported report."""
     delivery_obj = models.Delivery.objects.get(id=delivery_id)
     supplier_obj = delivery_obj.supplier
-    supplier_api = suppliers.get_supplier_api(supplier_obj.internal_name)
-    items = supplier_api.parse_delivery_report(delivery_obj.report.path)
+    items = parse_report(supplier_obj.internal_name, delivery_obj.report.path)
     for item in items:
         product_obj = get_supplier_product(supplier_obj.id, item.sku)
         if product_obj is not None:

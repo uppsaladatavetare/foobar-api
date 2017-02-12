@@ -129,7 +129,7 @@ class Delivery(UUIDModel, TimeStampedModel):
         return sum((item.total_price for item in items.all()), zero_money)
 
     def __str__(self):
-        fmt = 'Delivery from {0.supplier.name} ({0.date_created:%Y-%m-%m})'
+        fmt = 'Delivery from {0.supplier.name} ({0.date_created})'
         return fmt.format(self)
 
 

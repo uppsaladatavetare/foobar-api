@@ -1,7 +1,10 @@
+import tempfile
+from django import forms
 from django.contrib import admin
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
+from .suppliers.base import SupplierAPIException
 from . import models, api
 
 
@@ -77,6 +80,29 @@ class DeliveryItemInline(admin.TabularInline):
                                  'supplier_product__product')
 
 
+class DeliveryForm(forms.ModelForm):
+    """Implements custom validation for the Delivery admin."""
+
+    def clean(self):
+        supplier = self.cleaned_data.get('supplier')
+        report = self.cleaned_data.get('report')
+        try:
+            # `report` contain most likely an in-memory file.
+            # Save it to a temporary file, then try to parse it.
+            with tempfile.NamedTemporaryFile() as f:
+                f.write(report.read())
+                items = api.parse_report(supplier.internal_name, f.name)
+        except SupplierAPIException as e:
+            raise forms.ValidationError(
+                _('Report parse error: %s') % str(e)
+            )
+        if not items:
+            raise forms.ValidationError(
+                _('No products could be imported from the report file.')
+            )
+        return self.cleaned_data
+
+
 @admin.register(models.Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
     list_display = ('id', 'supplier', 'total_amount', 'locked',
@@ -87,6 +113,7 @@ class DeliveryAdmin(admin.ModelAdmin):
                        'error_message', 'locked',)
     ordering = ('-date_created',)
     actions_on_top = True
+    form = DeliveryForm
     fieldsets = (
         (None, {
             'fields': (

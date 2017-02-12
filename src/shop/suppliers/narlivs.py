@@ -6,7 +6,12 @@ import tempfile
 from django.conf import settings
 from narlivs import Narlivs
 
-from .base import SupplierBase, DeliveryItem, SupplierProduct
+from .base import (
+    DeliveryItem,
+    SupplierAPIException,
+    SupplierBase,
+    SupplierProduct
+)
 
 ITEM_PATTERN = re.compile(r"""
     \s*?\d+                    # Row
@@ -40,7 +45,9 @@ def pdf_to_text(path):
     Depends on the external pdftotext command line tool.
     """
     with tempfile.NamedTemporaryFile(mode='r') as f:
-        subprocess.call(['pdftotext', '-layout', path, f.name])
+        code = subprocess.call(['pdftotext', '-layout', path, f.name])
+        if code != 0:
+            return None
         return f.read()
 
 
@@ -55,8 +62,18 @@ class SupplierAPI(SupplierBase):
 
     def parse_delivery_report(self, report_path):
         data = pdf_to_text(report_path)
+
+        if not data:
+            raise SupplierAPIException('The report is probably not in PDF '
+                                       'format.')
+
         items = [m.groupdict() for m in ITEM_PATTERN.finditer(data)]
-        net = NET_VALUE_PATTERN.search(data).group(1)
+        net = NET_VALUE_PATTERN.search(data)
+
+        if not net or not items:
+            raise SupplierAPIException('The report could not be parsed.')
+
+        net = net.group(1)
 
         # Cast the item values to proper types.
         items = [{k: ITEM_TYPE_MAPPINGS[k](v) for k, v in item.items()}
