@@ -82,7 +82,7 @@ class SupplierProduct(UUIDModel, TimeStampedModel):
         unique_together = ('supplier', 'sku',)
 
     def __str__(self):
-        return '{0.supplier.name}: {0.name}'.format(self)
+        return self.name
 
 
 class Delivery(UUIDModel, TimeStampedModel):
@@ -99,13 +99,19 @@ class Delivery(UUIDModel, TimeStampedModel):
 
     @property
     def valid(self):
-        """Tells whether the delivery is valid for processing or not.
+        """Tells whether the delivery is valid for processing or not."""
+        return self.associated and self.received
 
-        In order to process a delivery, all the delivery items must be
-        associated with a product in the system.
-        """
+    @property
+    def associated(self):
+        """Tells if all the delivered items are associated with a product."""
         qs = self.items.all().select_related('product')
-        return not any(item.product is None for item in qs)
+        return all(item.product is not None for item in qs)
+
+    @property
+    def received(self):
+        """Tells if all the delivered items are marked as received."""
+        return all(item.received for item in self.delivery_items.all())
 
     @property
     def total_amount(self):
@@ -135,6 +141,11 @@ class DeliveryItem(UUIDModel):
         decimal_places=2,
         default_currency=settings.DEFAULT_CURRENCY,
         currency_choices=settings.CURRENCY_CHOICES
+    )
+    received = models.BooleanField(
+        default=False,
+        help_text=_('Has the product been received?'),
+        verbose_name='☑️'
     )
 
     @property

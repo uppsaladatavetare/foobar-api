@@ -45,14 +45,18 @@ class SupplierProductAdmin(admin.ModelAdmin):
 
 
 class DeliveryItemInline(admin.TabularInline):
-    fields = ('supplier_product', 'is_associated', 'qty', 'price',
-              'total_price',)
-    readonly_fields = ('total_price', 'is_associated',)
-    ordering = ('-supplier_product__product',)
+    fields = ('received', 'supplier_product', 'category', 'is_associated',
+              'qty', 'price', 'total_price',)
+    readonly_fields = ('total_price', 'is_associated', 'category',)
+    ordering = ('-supplier_product__product__category',
+                'supplier_product__product__name', 'received',)
     verbose_name = _('Delivery item')
     model = models.Delivery.items.through
     raw_id_fields = ('supplier_product',)
     extra = 0
+
+    def category(self, obj):
+        return obj.supplier_product.product.category.name
 
     def is_associated(self, obj):
         # Ugly hack for forcing django admin to display the value as a boolean
@@ -60,7 +64,7 @@ class DeliveryItemInline(admin.TabularInline):
     is_associated.boolean = True
 
     def get_readonly_fields(self, request, obj=None):
-        if obj:
+        if obj and obj.locked:
             return self.readonly_fields + ('supplier_product', 'qty', 'price',)
         return self.readonly_fields
 
@@ -75,11 +79,13 @@ class DeliveryItemInline(admin.TabularInline):
 
 @admin.register(models.Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
-    list_display = ('id', 'supplier', 'total_amount', 'date_created',)
-    list_filter = ('supplier',)
+    list_display = ('id', 'supplier', 'total_amount', 'locked',
+                    'date_created',)
+    list_filter = ('supplier', 'locked',)
     inlines = (DeliveryItemInline,)
     readonly_fields = ('total_amount', 'date_created', 'valid',
                        'error_message', 'locked',)
+    ordering = ('-date_created',)
     actions_on_top = True
     fieldsets = (
         (None, {
@@ -111,8 +117,10 @@ class DeliveryAdmin(admin.ModelAdmin):
     valid.boolean = True
 
     def error_message(self, obj):
-        if not obj.valid:
+        if not obj.associated:
             return _('Some of the products need to be associated.')
+        if not obj.received:
+            return _('Some of the products need to be marked as received.')
         return '---'
 
     def get_readonly_fields(self, request, obj=None):

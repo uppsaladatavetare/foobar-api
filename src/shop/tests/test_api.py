@@ -164,7 +164,9 @@ class ShopAPITest(TestCase):
         item_obj1 = factories.DeliveryItemFactory(
             delivery=delivery_obj,
             qty=10,
-            price=Money(50, 'SEK')
+            price=Money(50, 'SEK'),
+            received=True
+
         )
         self.assertTrue(item_obj1.is_associated)
         product_obj1 = item_obj1.supplier_product.product
@@ -172,11 +174,16 @@ class ShopAPITest(TestCase):
         item_obj2 = factories.DeliveryItemFactory(
             delivery=delivery_obj,
             qty=5,
-            price=Money(10, 'SEK')
+            price=Money(10, 'SEK'),
+            received=False
         )
         self.assertTrue(item_obj2.is_associated)
         product_obj2 = item_obj2.supplier_product.product
         pre_qty2 = product_obj2.qty
+        self.assertFalse(delivery_obj.valid)
+        item_obj2.received = True
+        item_obj2.save()
+        self.assertTrue(delivery_obj.valid)
         api.process_delivery(delivery_obj.id)
         trxs_qs = models.ProductTransaction.objects
         self.assertEqual(trxs_qs.count(), 2)

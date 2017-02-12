@@ -66,3 +66,4 @@ class DeliveryItemFactory(factory.django.DjangoModelFactory):
     supplier_product = factory.SubFactory(SupplierProductFactory)
     qty = factory.fuzzy.FuzzyInteger(1, 50)
     price = FuzzyMoney(10, 50)
+    received = True
