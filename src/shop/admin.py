@@ -68,7 +68,8 @@ class DeliveryItemInline(admin.TabularInline):
 
     def get_readonly_fields(self, request, obj=None):
         if obj and obj.locked:
-            return self.readonly_fields + ('supplier_product', 'qty', 'price',)
+            return self.readonly_fields + ('supplier_product', 'qty', 'price',
+                                           'received',)
         return self.readonly_fields
 
     def has_delete_permission(self, request, obj=None):
