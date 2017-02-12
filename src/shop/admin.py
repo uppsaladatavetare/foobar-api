@@ -112,7 +112,7 @@ class DeliveryAdmin(admin.ModelAdmin):
     readonly_fields = ('total_amount', 'date_created', 'valid',
                        'error_message', 'locked',)
     ordering = ('-date_created',)
-    actions_on_top = True
+    actions = None
     form = DeliveryForm
     fieldsets = (
         (None, {
@@ -190,6 +190,12 @@ class DeliveryAdmin(admin.ModelAdmin):
             ),
         ]
         return custom_urls + urls
+
+    def has_delete_permission(self, request, obj=None):
+        # Disable deleting of processed deliveries
+        if obj:
+            return not obj.locked
+        return super().has_delete_permission(request, obj)
 
 
 @admin.register(models.ProductCategory)
