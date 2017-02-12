@@ -75,6 +75,12 @@ class SupplierProduct(UUIDModel, TimeStampedModel):
     image = models.ImageField(blank=True, null=True,
                               upload_to=generate_supplier_product_filename,
                               storage=OverwriteFileSystemStorage())
+    qty_multiplier = models.PositiveIntegerField(
+        verbose_name=_('Quantity multiplier'),
+        help_text=_('The quantity in the report will be multiplied by this '
+                    'value.'),
+        default=1
+    )
 
     class Meta:
         verbose_name = _('supplier product')

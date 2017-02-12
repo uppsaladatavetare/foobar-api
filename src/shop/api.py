@@ -131,8 +131,8 @@ def populate_delivery(delivery_id):
             models.DeliveryItem.objects.create(
                 delivery=delivery_obj,
                 supplier_product_id=product_obj.id,
-                qty=item.qty,
-                price=item.price
+                qty=item.qty * product_obj.qty_multiplier,
+                price=item.price / product_obj.qty_multiplier
             )
     return delivery_obj
 

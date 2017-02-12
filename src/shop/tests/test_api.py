@@ -145,7 +145,8 @@ class ShopAPITest(TestCase):
             supplier=supplier_obj,
             name='Billys',
             sku='101176931',
-            price='9'
+            price='9',
+            qty_multiplier=2
         )
         delivery_obj = factories.DeliveryFactory(
             supplier=supplier_obj,
@@ -153,11 +154,13 @@ class ShopAPITest(TestCase):
         )
         delivery_obj = api.populate_delivery(delivery_obj.id)
         self.assertIsNotNone(delivery_obj)
-        delivery_objs = models.Delivery.objects.all()
-        self.assertEqual(len(delivery_objs), 1)
-        delivery_obj = delivery_objs[0]
-        delivery_items = delivery_obj.items.all()
+        delivery_obj.refresh_from_db()
+        delivery_items = delivery_obj.delivery_items.all()
         self.assertEqual(len(delivery_items), 1)
+        # The quantity and the price should be recalculated
+        # according to the multiplier.
+        self.assertEqual(delivery_items[0].qty, 40)
+        self.assertEqual(delivery_items[0].price.amount, Decimal('4.62'))
 
     def test_process_delivery(self):
         delivery_obj = factories.DeliveryFactory()
