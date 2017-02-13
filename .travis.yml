@@ -2,19 +2,31 @@ language: python
 
 sudo: required
 
-python:
-  - "3.4"
-
 install:
-  - pip install -r requirements/test.txt
   - sudo apt-get install poppler-utils
+  - pip install tox
 
-env:
-  matrix:
-    - TARGET=test
-    - TARGET=lint
+matrix:
+  include:
+    - python: 3.4
+      env: ENV=py34-1.9
+    - python: 3.5
+      env: ENV=py35-1.10
+    - python: 3.6
+      env: ENV=py36-1.11
+    - python: 3.4
+      env: ENV=py34-1.9
+    - python: 3.5
+      env: ENV=py35-1.10
+    - python: 3.6
+      env: ENV=py36-1.11
+    - python: 3.4
+      env: ENV=py34-1.9
+    - python: 3.5
+      env: ENV=py35-1.10
+    - python: 3.6
+      env: ENV=py36-1.11
+    - python: 3.4
+      env: ENV=flake8
 
-script: make $TARGET
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+script: tox -e $ENV

@@ -19,7 +19,7 @@ This repository contains the backend for the FooBar kiosk and inventory system.
 
 ## How do I run tests?
 
-We use [tox](https://tox.readthedocs.org/en/latest/) to automate testing for multiple Python versions (currently 3.4 and 3.5). To run test, simply execute following command in the root directory:
+We use [tox](https://tox.readthedocs.org/en/latest/) to automate testing against all supported Python and Django versions. To run test, simply execute following command in the root directory:
 
     $ tox
 
