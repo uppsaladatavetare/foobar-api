@@ -126,12 +126,13 @@ class StocktakeChunk(UUIDModel):
     locked = models.BooleanField(default=False)
     owner = models.ForeignKey('auth.User', null=True, blank=True)
 
-    def item_count(self):
-        return self.items.count()
-
     class Meta:
         verbose_name = _('Chunk')
         verbose_name_plural = _('Chunks')
+        unique_together = ('stocktake', 'owner')
+
+    def item_count(self):
+        return self.items.count()
 
     def __str__(self):
         return str(self.id)

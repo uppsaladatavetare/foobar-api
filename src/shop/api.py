@@ -205,7 +205,7 @@ def finalize_stocktaking(stocktake_id):
 
 
 def finalize_stocktake_chunk(chunk_id):
-    """Markes given chunk as finished."""
+    """Marks given chunk as finished."""
     chunk_obj = models.StocktakeChunk.objects.get(id=chunk_id)
     if chunk_obj.locked:
         raise exceptions.APIException('Chunk already locked.')
@@ -216,12 +216,23 @@ def finalize_stocktake_chunk(chunk_id):
 
 @transaction.atomic
 def assign_free_stocktake_chunk(user_id, stocktake_id):
-    """Assignes a free stock-take chunk to the user, if any free left.
+    """Assigns a free stock-take chunk to a user, if any free left.
 
     If user is already assigned to a chunk, that chunk should be returned.
     """
     chunk_qs = models.StocktakeChunk.objects.select_for_update()
-    chunk_objs = chunk_qs.filter(stocktake_id=stocktake_id, locked=False)
+    try:
+        return chunk_qs.get(
+            stocktake_id=stocktake_id,
+            owner_id=user_id
+        )
+    except models.StocktakeChunk.DoesNotExist:
+        pass
+    chunk_objs = chunk_qs.filter(
+        stocktake_id=stocktake_id,
+        locked=False,
+        owner__isnull=True
+    )
     if not chunk_objs:
         return None
     chunk_obj = chunk_objs.first()

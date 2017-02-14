@@ -290,21 +290,33 @@ class ShopAPITest(TestCase):
             stocktake=stocktake_obj,
             locked=False
         )
-        user_obj = User.objects.create_superuser(
+        factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        user_obj1 = User.objects.create_superuser(
             'the_baconator', 'bacon@foobar.com', '123'
         )
-        obj1 = api.assign_free_stocktake_chunk(user_obj.id, stocktake_obj.id)
+        user_obj2 = User.objects.create_superuser(
+            'ludo', 'ludo@foobar.com', '123'
+        )
+        obj1 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
         self.assertIsNotNone(obj1)
         # Work on the first chunk not yet completed
-        obj2 = api.assign_free_stocktake_chunk(user_obj.id, stocktake_obj.id)
+        obj2 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
         self.assertIsNotNone(obj1)
         self.assertEqual(obj1.id, obj2.id)
         api.finalize_stocktake_chunk(obj1.id)
         # Work on the next chunk
-        obj3 = api.assign_free_stocktake_chunk(user_obj.id, stocktake_obj.id)
+        obj3 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
         self.assertIsNotNone(obj3)
         self.assertNotEqual(obj2.id, obj3.id)
+        # Another user wants to work too
+        obj4 = api.assign_free_stocktake_chunk(user_obj2.id, stocktake_obj.id)
+        self.assertIsNotNone(obj4)
+        self.assertNotEqual(obj3.id, obj4.id)
         api.finalize_stocktake_chunk(obj3.id)
+        api.finalize_stocktake_chunk(obj4.id)
         # Work is finished
-        obj4 = api.assign_free_stocktake_chunk(user_obj.id, stocktake_obj.id)
-        self.assertIsNone(obj4)
+        obj5 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
+        self.assertIsNone(obj5)
