@@ -23,7 +23,7 @@ class ProductTrxFactory(factory.django.DjangoModelFactory):
         model = models.ProductTransaction
 
     product = factory.SubFactory(ProductFactory)
-    qty = factory.fuzzy.FuzzyInteger(-10, -1)
+    qty = 0
     trx_type = enums.TrxType.PURCHASE
 
 
@@ -67,3 +67,24 @@ class DeliveryItemFactory(factory.django.DjangoModelFactory):
     qty = factory.fuzzy.FuzzyInteger(1, 50)
     price = FuzzyMoney(10, 50)
     received = True
+
+
+class StocktakeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Stocktake
+
+
+class StocktakeChunkFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.StocktakeChunk
+
+    stocktake = factory.SubFactory(StocktakeFactory)
+
+
+class StocktakeItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.StocktakeItem
+
+    chunk = factory.SubFactory(StocktakeChunkFactory)
+    product = factory.SubFactory(ProductFactory)
+    qty = factory.fuzzy.FuzzyInteger(1, 50)

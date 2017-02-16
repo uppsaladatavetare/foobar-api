@@ -4,9 +4,10 @@ from decimal import Decimal
 from moneyed import Money
 
 from django.test import TestCase
+from django.contrib.auth.models import User
 
 from ..suppliers.base import SupplierBase, DeliveryItem, SupplierProduct
-from .. import api, models, enums
+from .. import api, models, enums, exceptions
 from .models import DummyModel
 from . import factories
 
@@ -194,3 +195,128 @@ class ShopAPITest(TestCase):
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty - pre_qty1, 10)
         self.assertEqual(product_obj2.qty - pre_qty2, 5)
+
+    def test_initiate_stockchecking(self):
+        factories.ProductFactory.create_batch(size=3)
+        stocktake_obj = api.initiate_stocktaking(chunk_size=2)
+        self.assertIsNotNone(stocktake_obj)
+        stocktake_qs = models.Stocktake.objects
+        self.assertEqual(stocktake_qs.count(), 1)
+        chunk_qs = stocktake_obj.chunks
+        self.assertEqual(chunk_qs.count(), 2)
+        chunk_objs = chunk_qs.all()
+        self.assertEqual(chunk_objs[0].items.count(), 2)
+        self.assertEqual(chunk_objs[1].items.count(), 1)
+        product_ids = [
+            chunk_objs[0].items.all()[0].id,
+            chunk_objs[0].items.all()[1].id,
+            chunk_objs[1].items.all()[0].id
+        ]
+        self.assertEqual(len(set(product_ids)), 3)
+        # Make sure that only one stocktaking can place at the same time
+        with self.assertRaises(exceptions.APIException):
+            api.initiate_stocktaking()
+
+    def test_finalize_stocktaking(self):
+        stocktake_obj = factories.StocktakeFactory.create()
+        chunk_obj1 = factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=True
+        )
+        chunk_obj2 = factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        product_obj1 = factories.ProductFactory.create()
+        product_obj2 = factories.ProductFactory.create()
+        product_obj3 = factories.ProductFactory.create()
+        factories.ProductTrxFactory(product=product_obj1, qty=-100)
+        factories.ProductTrxFactory(product=product_obj2, qty=0)
+        factories.ProductTrxFactory(product=product_obj3, qty=50)
+        item1 = factories.StocktakeItemFactory.create(
+            product=product_obj1,
+            chunk=chunk_obj1,
+            qty=5
+        )
+        item2 = factories.StocktakeItemFactory.create(
+            product=product_obj2,
+            chunk=chunk_obj1,
+            qty=1
+        )
+        item3 = factories.StocktakeItemFactory.create(
+            product=product_obj3,
+            chunk=chunk_obj2,
+            qty=10
+        )
+        self.assertFalse(stocktake_obj.complete)
+        with self.assertRaises(exceptions.APIException):
+            api.finalize_stocktaking(stocktake_obj.id)
+        chunk_obj2.locked = True
+        chunk_obj2.save()
+        self.assertTrue(stocktake_obj.complete)
+        api.finalize_stocktaking(stocktake_obj.id)
+        item1.product.refresh_from_db()
+        item2.product.refresh_from_db()
+        item3.product.refresh_from_db()
+        self.assertEqual(item1.product.qty, 5)
+        self.assertEqual(item2.product.qty, 1)
+        self.assertEqual(item3.product.qty, 10)
+        stocktake_obj.refresh_from_db()
+        self.assertTrue(stocktake_obj.locked)
+        trxs_qs = models.ProductTransaction.objects
+        self.assertEqual(trxs_qs.count(), 6)
+
+    def test_finalize_stocktake_chunk(self):
+        stocktake_obj = factories.StocktakeFactory.create()
+        chunk_obj1 = factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        api.finalize_stocktake_chunk(chunk_obj1.id)
+        chunk_obj1.refresh_from_db()
+        self.assertTrue(chunk_obj1.locked)
+
+    def test_assign_free_stocktake_chunk(self):
+        stocktake_obj = factories.StocktakeFactory.create()
+        factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=True
+        )
+        factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        factories.StocktakeChunkFactory.create(
+            stocktake=stocktake_obj,
+            locked=False
+        )
+        user_obj1 = User.objects.create_superuser(
+            'the_baconator', 'bacon@foobar.com', '123'
+        )
+        user_obj2 = User.objects.create_superuser(
+            'ludo', 'ludo@foobar.com', '123'
+        )
+        obj1 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
+        self.assertIsNotNone(obj1)
+        # Work on the first chunk not yet completed
+        obj2 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
+        self.assertIsNotNone(obj1)
+        self.assertEqual(obj1.id, obj2.id)
+        api.finalize_stocktake_chunk(obj1.id)
+        # Work on the next chunk
+        obj3 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
+        self.assertIsNotNone(obj3)
+        self.assertNotEqual(obj2.id, obj3.id)
+        # Another user wants to work too
+        obj4 = api.assign_free_stocktake_chunk(user_obj2.id, stocktake_obj.id)
+        self.assertIsNotNone(obj4)
+        self.assertNotEqual(obj3.id, obj4.id)
+        api.finalize_stocktake_chunk(obj3.id)
+        api.finalize_stocktake_chunk(obj4.id)
+        # Work is finished
+        obj5 = api.assign_free_stocktake_chunk(user_obj1.id, stocktake_obj.id)
+        self.assertIsNone(obj5)

@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+{{ block.super }}
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+<div class="submit-row">
+	{% if not original.locked %}<input type="submit" value="{% trans 'Save and continue editing' %}" name="_continue" />{% endif %}
+	{% if not original.locked or user.is_superuser %}<input type="submit" value="{% trans 'Finalize this chunk and take next' %}" name="_lock" />{% endif %}
+</div>
+{% endblock %}

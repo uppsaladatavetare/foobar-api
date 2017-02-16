@@ -1,11 +1,196 @@
 import tempfile
 from django import forms
-from django.contrib import admin
+from django.shortcuts import get_object_or_404
+from django.contrib import admin, messages
+from django.http import HttpResponseRedirect, Http404
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 from .suppliers.base import SupplierAPIException
-from . import models, api
+from . import models, api, exceptions
+
+
+class ReadonlyMixin:
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class StocktakeItemInline(ReadonlyMixin, admin.TabularInline):
+    model = models.StocktakeItem
+    fields = ('product', 'category', 'qty',)
+    readonly_fields = ('product', 'category',)
+    ordering = ('product__category', 'product__name',)
+    extra = 0
+
+    def category(self, obj):
+        return obj.product.category
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.locked:
+            return self.readonly_fields + ('qty',)
+        return self.readonly_fields
+
+
+@admin.register(models.StocktakeChunk)
+class StocktakeChunkAdmin(ReadonlyMixin, admin.ModelAdmin):
+    inlines = [StocktakeItemInline]
+    fields = ('parent_link', 'locked', 'owner',)
+    readonly_fields = fields
+
+    class Media:
+        css = {'all': ('css/hide_admin_original.css',)}
+
+    def response_change(self, request, obj):
+        if '_lock' in request.POST:
+            if obj.owner != request.user and not request.user.is_superuser:
+                self.message_user(
+                    request=request,
+                    message=_('You cannot lock a chunk you do not own.'),
+                    level=messages.ERROR
+                )
+                return HttpResponseRedirect(
+                    reverse('admin:shop_stocktakechunk_change',
+                            args=(obj.id,))
+                )
+            try:
+                api.finalize_stocktake_chunk(obj.id)
+            except exceptions.APIException as e:
+                self.message_user(
+                    request=request,
+                    message=str(e),
+                    level=messages.ERROR
+                )
+                return HttpResponseRedirect(
+                    reverse('admin:shop_stocktakechunk_change',
+                            args=(obj.id,))
+                )
+            new_chunk = api.assign_free_stocktake_chunk(
+                request.user.id, obj.stocktake_id
+            )
+            if new_chunk is None:
+                self.message_user(request, _('No chunks left to work on.'))
+                return HttpResponseRedirect(
+                    reverse('admin:shop_stocktake_change',
+                            args=(obj.stocktake.id,))
+                )
+            return HttpResponseRedirect(
+                reverse('admin:shop_stocktakechunk_change',
+                        args=(new_chunk.id,))
+            )
+        return super().response_change(request, obj)
+
+    def parent_link(self, obj):
+        return '<a href="{}">{}</a>'.format(
+            reverse('admin:shop_stocktake_change', args=(obj.stocktake_id,)),
+            obj.id
+        )
+    parent_link.allow_tags = True
+    parent_link.verbose_name = _('Parent')
+
+    def get_model_perms(self, request):
+        """
+        Return empty perms dict thus hiding the model from admin index.
+        """
+        return {}
+
+
+class StocktakeChunkInline(ReadonlyMixin, admin.TabularInline):
+    model = models.StocktakeChunk
+    fields = ('link', 'locked', 'owner',)
+    readonly_fields = fields
+    extra = 0
+
+    def link(self, obj):
+        return '<a href="{}">{}</a>'.format(
+            reverse('admin:shop_stocktakechunk_change', args=(obj.id,)),
+            obj.id
+        )
+    link.allow_tags = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(models.Stocktake)
+class StocktakeAdmin(ReadonlyMixin, admin.ModelAdmin):
+    list_display = ('id', 'locked', 'date_created',)
+    fields = ('id', 'locked', 'progress',)
+    readonly_fields = ('id', 'locked', 'progress',)
+    inlines = [StocktakeChunkInline]
+    actions = None
+
+    class Media:
+        css = {'all': ('css/hide_admin_original.css',)}
+
+    def progress(self, obj=None):
+        if obj:
+            return '{0:.0f}%'.format(obj.progress * 100)
+
+    def response_change(self, request, obj):
+        if '_finalize' in request.POST:
+            api.finalize_stocktaking(obj.id)
+        return super().response_change(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return obj and not obj.locked
+
+    def initiate_stocktaking(self, request):
+        try:
+            obj = api.initiate_stocktaking()
+        except exceptions.APIException as e:
+            self.message_user(request, str(e), messages.ERROR)
+        url = reverse('admin:shop_stocktake_change', args=(obj.id,))
+        return HttpResponseRedirect(url)
+
+    def assign_free_chunk(self, request, obj_id):
+        chunk_obj = api.assign_free_stocktake_chunk(request.user.id, obj_id)
+        if not chunk_obj:
+            self.message_user(request, _('No chunks left to work on.'))
+            return HttpResponseRedirect(
+                reverse('admin:shop_stocktake_change',
+                        args=(chunk_obj.stocktake.id,))
+            )
+        return HttpResponseRedirect(
+            reverse('admin:shop_stocktakechunk_change', args=(chunk_obj.id,))
+        )
+
+    def finalize_stocktaking(self, request, obj_id):
+        try:
+            obj = api.finalize_stocktaking(obj_id)
+        except exceptions.APIException as e:
+            self.message_user(request, str(e), messages.ERROR)
+            url = reverse('admin:shop_stocktake_changelist')
+            return HttpResponseRedirect(url)
+        return HttpResponseRedirect(
+            reverse('admin:shop_stocktake_change', args=(obj.id,))
+        )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            url(
+                r'^initiate-stocktaking/$',
+                self.admin_site.admin_view(self.initiate_stocktaking),
+                name='initiate-stocktaking',
+            ),
+            url(
+                r'^(?P<obj_id>.+)/assign-free-chunk/$',
+                self.admin_site.admin_view(self.assign_free_chunk),
+                name='assign-free-chunk',
+            ),
+            url(
+                r'^(?P<obj_id>.+)/finalize/$',
+                self.admin_site.admin_view(self.finalize_stocktaking),
+                name='finalize-stocktaking',
+            ),
+        ]
+        return custom_urls + urls
 
 
 class ProductStateFilter(admin.SimpleListFilter):
@@ -132,7 +317,6 @@ class DeliveryAdmin(admin.ModelAdmin):
                 ('valid', 'error_message',)
             )
         }),
-
     )
 
     class Media:
@@ -164,9 +348,6 @@ class DeliveryAdmin(admin.ModelAdmin):
             api.populate_delivery(obj.id)
 
     def process_delivery(self, request, obj_id):
-        from django.shortcuts import get_object_or_404
-        from django.contrib import messages
-        from django.http import HttpResponseRedirect, Http404
         obj = get_object_or_404(models.Delivery, id=obj_id)
         if obj.locked:
             raise Http404()
@@ -179,7 +360,6 @@ class DeliveryAdmin(admin.ModelAdmin):
         url = reverse(
             'admin:shop_delivery_change',
             args=[obj_id],
-            current_app=self.admin_site.name,
         )
         return HttpResponseRedirect(url)
 

@@ -41,7 +41,7 @@ def generate_delivery_report_filename(instance, filename):
     _, ext = os.path.splitext(filename)
     return 'report/{delivery_id}{ext}'.format(
         delivery_id=instance.id,
-        ext=ext,
+        ext=ext.lower(),
     )
 
 
@@ -89,6 +89,65 @@ class SupplierProduct(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class Stocktake(UUIDModel, TimeStampedModel):
+    """Represents the set of products for which stock-taking took place.
+
+    The items get divided into smaller chunks to allow for multiple people to
+    do a stock-taking in parallel.
+    """
+    locked = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = _('Stock-take')
+        verbose_name_plural = _('Stock-takes')
+
+    @property
+    def complete(self):
+        return all(self.chunks.values_list('locked', flat=True))
+
+    @property
+    def progress(self):
+        chunks = list(self.chunks.values_list('locked', flat=True))
+        return chunks.count(True) / len(chunks)
+
+    def __str__(self):
+        return str(self.id)
+
+
+class StocktakeChunk(UUIDModel):
+    """Represents a chunk of items that are part of a stock-taking.
+
+    Admins can take ownership of chunks, so no one else can interfere with
+    counting of the products in someone's chunk.
+    """
+    stocktake = models.ForeignKey('Stocktake', related_name='chunks')
+    locked = models.BooleanField(default=False)
+    owner = models.ForeignKey('auth.User', null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('Chunk')
+        verbose_name_plural = _('Chunks')
+        unique_together = ('stocktake', 'owner')
+
+    def item_count(self):
+        return self.items.count()
+
+    def __str__(self):
+        return str(self.id)
+
+
+class StocktakeItem(UUIDModel):
+    chunk = models.ForeignKey('StocktakeChunk', on_delete=models.CASCADE,
+                              related_name='items')
+    product = models.ForeignKey('Product',
+                                on_delete=models.PROTECT,
+                                related_name='stocktake_item')
+    qty = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return str(self.id)
 
 
 class Delivery(UUIDModel, TimeStampedModel):

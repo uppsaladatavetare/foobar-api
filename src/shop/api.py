@@ -1,7 +1,7 @@
 import logging
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from . import models, enums, suppliers
+from . import models, enums, suppliers, exceptions
 
 log = logging.getLogger(__name__)
 
@@ -158,3 +158,84 @@ def process_delivery(delivery_id):
         )
     delivery_obj.locked = True
     delivery_obj.save()
+
+
+@transaction.atomic
+def initiate_stocktaking(chunk_size=10):
+    """Initiates a stock-taking procedure for all the products."""
+    stocktake_qs = models.Stocktake.objects
+    # Make sure that there is no stock-taking in progress
+    if not stocktake_qs.filter(locked=False).count() == 0:
+        raise exceptions.APIException('Stock-taking already in progress.')
+    stocktake_obj = stocktake_qs.create()
+    # Order products by category, so that chunk contain mostly that share
+    # category. Products in the same category are most often placed near each
+    # other, which should make the process of stock-taking more effective.
+    product_objs = list(models.Product.objects.all().order_by('category'))
+    for i in range(0, len(product_objs), chunk_size):
+        chunk_obj = stocktake_obj.chunks.create()
+        chunk_products = product_objs[i:i + chunk_size]
+        for p in chunk_products:
+            chunk_obj.items.create(product=p)
+    return stocktake_obj
+
+
+@transaction.atomic
+def finalize_stocktaking(stocktake_id):
+    """Applies the result of stock taking to the stock quantities."""
+    stocktake_obj = models.Stocktake.objects.get(id=stocktake_id)
+    if stocktake_obj.locked:
+        raise exceptions.APIException('Stock-taking already finished.')
+    # Make sure that all the chunks are finished
+    chunk_objs = stocktake_obj.chunks.all()
+    if not all(obj.locked for obj in chunk_objs):
+        raise exceptions.APIException('Found unfinished chunks.')
+    for chunk_obj in chunk_objs:
+        for item_obj in chunk_obj.items.all():
+            product_obj = item_obj.product
+            create_product_transaction(
+                product_id=product_obj.id,
+                trx_type=enums.TrxType.CORRECTION,
+                qty=item_obj.qty - product_obj.qty,
+                reference=item_obj
+            )
+    stocktake_obj.locked = True
+    stocktake_obj.save()
+    return stocktake_obj
+
+
+def finalize_stocktake_chunk(chunk_id):
+    """Marks given chunk as finished."""
+    chunk_obj = models.StocktakeChunk.objects.get(id=chunk_id)
+    if chunk_obj.locked:
+        raise exceptions.APIException('Chunk already locked.')
+    chunk_obj.locked = True
+    chunk_obj.owner = None
+    chunk_obj.save()
+
+
+@transaction.atomic
+def assign_free_stocktake_chunk(user_id, stocktake_id):
+    """Assigns a free stock-take chunk to a user, if any free left.
+
+    If user is already assigned to a chunk, that chunk should be returned.
+    """
+    chunk_qs = models.StocktakeChunk.objects.select_for_update()
+    try:
+        return chunk_qs.get(
+            stocktake_id=stocktake_id,
+            owner_id=user_id
+        )
+    except models.StocktakeChunk.DoesNotExist:
+        pass
+    chunk_objs = chunk_qs.filter(
+        stocktake_id=stocktake_id,
+        locked=False,
+        owner__isnull=True
+    )
+    if not chunk_objs:
+        return None
+    chunk_obj = chunk_objs.first()
+    chunk_obj.owner_id = user_id
+    chunk_obj.save()
+    return chunk_obj
