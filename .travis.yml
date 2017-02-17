@@ -4,7 +4,7 @@ sudo: required
 
 install:
   - sudo apt-get install poppler-utils
-  - pip install tox
+  - pip install tox codecov
 
 matrix:
   include:
@@ -28,5 +28,10 @@ matrix:
       env: ENV=py36-1.11
     - python: 3.4
       env: ENV=flake8
+    - python: 3.5
+      env: ENV=coverage
 
 script: tox -e $ENV
+
+after_success:
+  - codecov

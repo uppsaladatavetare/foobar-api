@@ -8,6 +8,8 @@
 .coverage
 env/
 venv/
+.coverage
+coverage.xml
 
 # Packaging files:
 *.egg*
