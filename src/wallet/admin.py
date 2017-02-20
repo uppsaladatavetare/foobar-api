@@ -34,7 +34,7 @@ class WalletTransactionCreatorInline(admin.TabularInline):
         qs = super().get_queryset(request)
         return qs.none()
 
-    def has_add_permission(self, request, obj=None):
+    def has_delete_permission(self, request, obj=None):
         return False
 
 
