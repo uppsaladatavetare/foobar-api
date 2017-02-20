@@ -144,7 +144,7 @@ class StocktakeItem(UUIDModel):
     product = models.ForeignKey('Product',
                                 on_delete=models.PROTECT,
                                 related_name='stocktake_item')
-    qty = models.PositiveIntegerField(default=0)
+    qty = models.PositiveIntegerField(default=0, verbose_name=_('quantity'))
 
     def __str__(self):
         return str(self.id)
@@ -198,7 +198,7 @@ class DeliveryItem(UUIDModel):
     supplier_product = models.ForeignKey('SupplierProduct',
                                          on_delete=models.PROTECT,
                                          related_name='delivery_item')
-    qty = models.PositiveIntegerField()
+    qty = models.PositiveIntegerField(verbose_name=_('quantity'))
     price = MoneyField(
         null=True,
         blank=True,
@@ -256,7 +256,7 @@ class Product(UUIDModel, TimeStampedModel):
     active = models.BooleanField(default=True)
 
     # cached quantity
-    qty = models.IntegerField(verbose_name='quantity', default=0)
+    qty = models.IntegerField(verbose_name=_('quantity'), default=0)
 
     objects = querysets.ProductQuerySet.as_manager()
 
@@ -270,7 +270,7 @@ class Product(UUIDModel, TimeStampedModel):
 
 class ProductTransaction(UUIDModel, TimeStampedModel):
     product = models.ForeignKey(Product, related_name='transactions')
-    qty = models.IntegerField()
+    qty = models.IntegerField(verbose_name=_('quantity'))
     trx_type = EnumIntegerField(enums.TrxType)
     trx_status = EnumIntegerField(enums.TrxStatus,
                                   default=enums.TrxStatus.FINALIZED)
