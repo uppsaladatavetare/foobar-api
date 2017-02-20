@@ -8,7 +8,7 @@ This repository contains the backend for the FooBar kiosk and inventory system.
 ## Requirements
 
 - Python 3.4+
-- Django 1.9+
+- Django 1.10+
 - [pdftotext](https://linux.die.net/man/1/pdftotext) for delivery report parsing
 
 ## Setup

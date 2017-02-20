@@ -11,7 +11,10 @@ help:
 lint:
 	flake8 --exclude=migrations,settings src/
 
-test:
+check:
+	python src/manage.py check
+
+test: check
 	python src/manage.py test src/ --settings=foobar.settings.test
 
 coverage:
