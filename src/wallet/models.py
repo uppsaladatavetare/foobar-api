@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from djmoney.models.fields import MoneyField
+from django.utils.translation import ugettext_lazy as _
 from moneyed import Money
 from bananas.models import TimeStampedModel, UUIDModel
 from enumfields import EnumIntegerField
@@ -66,9 +67,16 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
         decimal_places=2,
         default_currency=settings.DEFAULT_CURRENCY
     )
-    trx_type = EnumIntegerField(enums.TrxType, default=enums.TrxType.INCOMING)
-    trx_status = EnumIntegerField(enums.TrxStatus,
-                                  default=enums.TrxStatus.FINALIZED)
+    trx_type = EnumIntegerField(
+        enums.TrxType,
+        verbose_name=_('type'),
+        default=enums.TrxType.INCOMING
+    )
+    trx_status = EnumIntegerField(
+        enums.TrxStatus,
+        verbose_name=_('status'),
+        default=enums.TrxStatus.FINALIZED
+    )
     reference = models.CharField(max_length=128, blank=True, null=True)
 
     objects = WalletTrxsQuerySet.as_manager()
@@ -93,3 +101,7 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
         else:
             return self.trx_status in [enums.TrxStatus.PENDING,
                                        enums.TrxStatus.FINALIZED]
+
+    class Meta:
+        verbose_name = _('transaction')
+        verbose_name_plural = _('transactions')

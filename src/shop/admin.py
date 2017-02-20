@@ -425,9 +425,8 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('active', 'category',)
     search_fields = ('code', 'name',)
     readonly_fields = ('qty', 'date_created', 'date_modified',)
-    inlines = (
-        ProductTransactionCreatorInline,
-    )
+    ordering = ('name',)
+    inlines = (ProductTransactionCreatorInline,)
     fieldsets = (
         (None, {
             'fields': (
