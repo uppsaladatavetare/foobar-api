@@ -6,7 +6,7 @@ from rest_framework import authentication, exceptions
 from rest_framework.authentication import get_authorization_header
 
 from .models import Token
-from foobar.models import Account
+from foobar.api import get_account
 
 
 def validate_header(auth):
@@ -82,7 +82,6 @@ class FooCardAuthentication(authentication.BaseAuthentication):
     """
     algorithm = 'HS256'
     message = 'Invalid token'
-    model = Account
 
     def authenticate(self, request):
         auth = get_authorization_header(request).split()
@@ -103,10 +102,9 @@ class FooCardAuthentication(authentication.BaseAuthentication):
         return self.authenticate_credentials(payload)
 
     def authenticate_credentials(self, payload):
-        account_id = payload.get('account_id')
-        try:
-            account = self.model.objects.get(pk=account_id)
-        except self.model.DoesNotExist:
+        card_id = payload.get('card_id')
+        account = get_account(card_id)
+        if account is None:
             raise exceptions.AuthenticationFailed(_(self.message))
 
         return (account, None)
