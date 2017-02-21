@@ -1,3 +1,5 @@
+import random
+
 import factory.fuzzy
 from .. import models
 
@@ -12,4 +14,8 @@ class CardFactory(factory.django.DjangoModelFactory):
         model = models.Card
 
     account = factory.SubFactory(AccountFactory)
-    number = str(factory.fuzzy.FuzzyInteger(0, (1 << 32) - 1))
+
+    @factory.lazy_attribute
+    def number(self):
+        value = random.randint(0, (1 << 32) - 1)
+        return str(value)
