@@ -12,4 +12,4 @@ class CardFactory(factory.django.DjangoModelFactory):
         model = models.Card
 
     account = factory.SubFactory(AccountFactory)
-    number = factory.fuzzy.FuzzyInteger(0, (1 << 32) - 1)
+    number = str(factory.fuzzy.FuzzyInteger(0, (1 << 32) - 1))
