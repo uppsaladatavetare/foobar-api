@@ -1,5 +1,6 @@
 import datetime
 import jwt
+from jwt.exceptions import InvalidTokenError
 from unittest.mock import patch
 
 from django.conf.urls import url
@@ -23,9 +24,6 @@ class MockView(APIView):
         return HttpResponse({'some': 1, 'thing': 2, 'dandy': 3})
 
     def post(self, request):
-        return HttpResponse({'some': 1, 'thing': 2, 'dandy': 3})
-
-    def put(self, request):
         return HttpResponse({'some': 1, 'thing': 2, 'dandy': 3})
 
 
@@ -65,6 +63,18 @@ class AuthenticateFooCardTokenTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_jwt.assert_called_once_with(token, 'secret', algorithm=self.enc)
+
+    @patch('authtoken.authentication.jwt.decode')
+    def test_auth_with_bad_token(self, mock_jwt):
+        token = '401f7ac837da42b97f613d789819ff93537bee6a'
+        auth = 'CardToken {0}'.format(token)
+
+        mock_jwt.side_effect = InvalidTokenError('Invalid token')
+
+        response = self.csrf_client.get(self.path, HTTP_AUTHORIZATION=auth)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         mock_jwt.assert_called_once_with(token, 'secret', algorithm=self.enc)
 
     @patch('authtoken.authentication.jwt.decode')
