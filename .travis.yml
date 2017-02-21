@@ -1,10 +1,11 @@
 language: python
 
-sudo: required
+addons:
+  apt:
+    packages:
+      - poppler-utils
 
 install:
-  - sudo apt-get update
-  - sudo apt-get install poppler-utils
   - pip install tox codecov
 
 matrix:
