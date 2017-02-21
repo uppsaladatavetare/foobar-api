@@ -7,6 +7,7 @@ DEFAULT_CURRENCY = settings.DEFAULT_CURRENCY
 
 get_wallet = partial(api.get_wallet, currency=DEFAULT_CURRENCY)
 get_balance = partial(api.get_balance, currency=DEFAULT_CURRENCY)
+set_balance = api.set_balance
 list_transactions = partial(api.list_transactions, currency=DEFAULT_CURRENCY)
 total_balance = partial(api.total_balance, currency=DEFAULT_CURRENCY)
 withdraw = api.withdraw

@@ -86,3 +86,35 @@ class PurchaseItem(UUIDModel):
 
     def __str__(self):
         return str(self.id)
+
+
+class WalletLogEntry(UUIDModel, TimeStampedModel):
+    user = models.ForeignKey(User, null=True, blank=True)
+    trx_type = EnumIntegerField(enums.TrxType,
+                                default=enums.TrxType.CORRECTION)
+    wallet = models.ForeignKey('wallet.Wallet',
+                               related_name='log_entries',
+                               editable=False)
+    comment = models.CharField(null=True, blank=True, max_length=128)
+    amount = MoneyField(
+        max_digits=10,
+        decimal_places=2,
+        default_currency=settings.DEFAULT_CURRENCY
+    )
+    pre_balance = MoneyField(
+        verbose_name=_('old balance'),
+        max_digits=10,
+        decimal_places=2,
+        default_currency=settings.DEFAULT_CURRENCY
+    )
+
+    class Meta:
+        verbose_name = _('wallet log entry')
+        verbose_name_plural = _('wallet log entries')
+
+    @property
+    def post_balance(self):
+        return self.pre_balance + self.amount
+
+    def __str__(self):
+        return str(self.id)

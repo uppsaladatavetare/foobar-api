@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
-from .models import Account, Card, Purchase, PurchaseItem
+from .models import Account, Card, Purchase, PurchaseItem, WalletLogEntry
 from foobar.wallet import api as wallet_api
 from shop import api as shop_api
 from shop import enums as shop_enums
@@ -116,10 +116,70 @@ def list_purchases(account_id, start=None, stop=None, **kwargs):
 
     Together with each purchase, a list of purchased items is returned.
     """
-
     account_obj = Account.objects.get(id=account_id)
     purchase_objs = account_obj.purchases.filter(
         account_id=account_id,
         **kwargs
     )[start:stop]
     return [get_purchase(obj.id) for obj in purchase_objs]
+
+
+@transaction.atomic
+def calculate_correction(new_balance, owner_id, user, reference=None):
+    """ Calculate the correct balance in the cash wallet """
+    wallet, old_balance = wallet_api.get_balance(
+                owner_id=owner_id,
+            )
+    correction_obj = WalletLogEntry.objects.create(
+                user=user,
+                trx_type=enums.TrxType.CORRECTION,
+                wallet=wallet,
+                comment=reference,
+                amount=0,
+                pre_balance=old_balance
+            )
+
+    correction_difference, difference = wallet_api.set_balance(
+                owner_id=owner_id,
+                new_balance=new_balance,
+                reference=correction_obj.id
+            )
+
+    correction_obj.amount = difference
+    correction_obj.save()
+    return correction_obj
+
+
+@transaction.atomic
+def make_deposit_or_withdrawal(amount, owner_id, user, reference=None):
+    wallet, old_balance = wallet_api.get_balance(
+                owner_id=owner_id,
+            )
+
+    correction_obj = WalletLogEntry.objects.create(
+            user=user,
+            trx_type=enums.TrxType.CORRECTION,
+            wallet=wallet,
+            comment=reference,
+            amount=amount,
+            pre_balance=old_balance
+        )
+
+    if amount.amount < 0:
+        wallet_api.withdraw(
+            owner_id=owner_id,
+            amount=-amount,
+            reference=correction_obj.id
+        )
+        correction_obj.trx_type = enums.TrxType.WITHDRAWAL
+        correction_obj.save()
+    elif amount.amount > 0:
+        wallet_api.deposit(
+            owner_id=owner_id,
+            amount=amount,
+            reference=correction_obj.id
+        )
+        correction_obj.trx_type = enums.TrxType.DEPOSIT
+        correction_obj.save()
+
+    return correction_obj

@@ -192,6 +192,35 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
         return response
 
 
+@admin.register(models.WalletLogEntry)
+class WalletLogEntryAdmin(ReadOnlyMixin, admin.ModelAdmin):
+    list_display = ('date_created',
+                    'user',
+                    'trx_type',
+                    'comment',
+                    'pre_balance',
+                    'amount',
+                    'post_balance'
+                    )
+    readonly_fields = ('date_created',
+                       'user',
+                       'trx_type',
+                       'pre_balance',
+                       'amount',
+                       'post_balance')
+
+    ordering = ('-date_created',)
+
+    def post_balance(self, obj):
+        return obj.post_balance
+    post_balance.short_description = _('new balance')
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        del actions['delete_selected']
+        return actions
+
+
 # Monkeypatch the default admin site in order to provide
 # custom context to the admin templates
 admin.site.index_template = 'admin/foobar_index.html'

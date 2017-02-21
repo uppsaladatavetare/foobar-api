@@ -101,6 +101,27 @@ class WalletTest(TestCase):
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
         self.assertEqual(balance, Money(0, wallet_obj.currency))
 
+    def test_set_balance(self):
+        wallet_obj = factories.WalletFactory.create()
+        factories.WalletTrxFactory.create(
+            wallet=wallet_obj,
+            trx_status=enums.TrxStatus.FINALIZED,
+            trx_type=enums.TrxType.INCOMING,
+            amount=Money(1000, wallet_obj.currency)
+        )
+        _, diff = api.set_balance(wallet_obj.owner_id, Money(800, 'SEK'))
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(diff.amount, -200)
+        self.assertEqual(balance.amount, 800)
+        _, diff = api.set_balance(wallet_obj.owner_id, Money(1000, 'SEK'))
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(diff.amount, 200)
+        self.assertEqual(balance.amount, 1000)
+        _, diff = api.set_balance(wallet_obj.owner_id, Money(1000, 'SEK'))
+        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        self.assertEqual(diff.amount, 0)
+        self.assertEqual(balance.amount, 1000)
+
     def test_withdraw(self):
         wallet_obj = factories.WalletFactory.create()
         factories.WalletTrxFactory.create(

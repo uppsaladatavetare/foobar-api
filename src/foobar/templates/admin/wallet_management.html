@@ -1,0 +1,43 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<div class="app-auth module" style="float: left; width: 49%;">
+    <table width="100%">
+        <caption>Correction</caption>
+        <tbody>
+            <tr class="model-group">
+                <th scope="row">
+                    <form method="post" action="" >
+                        <div style="display:table-caption;">
+                    	{% csrf_token %} 
+                    	{{ form_class.as_p }}
+                        </div>
+                    	<input type="submit" name="save_correction"  id="correction_save" style="float:right">
+                    </form>
+                </th>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="app-auth module" style="float: right; width: 49%;">
+    <table width="100%">
+        <caption>Deposit / Withdrawal</caption>
+        <tbody>
+            <tr class="model-group">
+                <th scope="row" >
+                    <form method="post" action=""  >
+                        <div style="display:table-caption;">
+                    	{% csrf_token %}
+                    	{{ form_class1.as_p }}
+                        </div>
+                    	<input type="submit" name="save_deposit" id="deposit_save" style="float:right;">
+                    </form>
+                </th>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<a href="{% url 'admin:foobar_walletlogentry_changelist'%}?wallet_id={{wallet.id}}"><button style="padding: 10px 15px; border: none; border-radius: 4px; color: #fff;cursor: pointer; background: #d34a4a; float: right;">See Wallet Corrections</button></a>
+
+
+{% endblock content %}
+    

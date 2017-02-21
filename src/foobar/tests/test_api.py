@@ -7,6 +7,7 @@ from wallet.tests.factories import WalletFactory, WalletTrxFactory
 from wallet.enums import TrxStatus
 from .factories import AccountFactory, CardFactory
 from moneyed import Money
+from django.contrib.auth.models import User
 
 
 class FoobarAPITest(TestCase):
@@ -195,3 +196,102 @@ class FoobarAPITest(TestCase):
         api.purchase(account_obj.id, products)
         objs = api.list_purchases(account_obj.id)
         self.assertEqual(len(objs), 1)
+
+    def test_calculation_correctíon(self):
+        wallet_obj = WalletFactory.create()
+        WalletTrxFactory.create(
+            wallet=wallet_obj,
+            amount=Money(1000, 'SEK'),
+            trx_status=TrxStatus.FINALIZED
+        )
+        user_obj = User.objects.create_superuser(
+            'the_baconator', 'bacon@foobar.com', '123'
+        )
+        # Test positive balance change
+        correction_obj = api.calculate_correction(
+            new_balance=Money(1200, 'SEK'),
+            user=user_obj,
+            owner_id=wallet_obj.owner_id
+        )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type.value, 0)
+        self.assertEqual(correction_obj.pre_balance.amount, 1000)
+        self.assertEqual(correction_obj.amount.amount, 200)
+        _, balance_correction = wallet_api.get_balance(
+            correction_obj.wallet.owner_id
+        )
+        self.assertEqual(balance_correction.amount, 1200)
+        # Test negative balance change
+        correction_obj = api.calculate_correction(
+            new_balance=Money(1000, 'SEK'),
+            user=user_obj,
+            owner_id=wallet_obj.owner_id
+        )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type.value, 0)
+        self.assertEqual(correction_obj.pre_balance.amount, 1200)
+        self.assertEqual(correction_obj.amount.amount, -200)
+        _, balance_correction = wallet_api.get_balance(
+            correction_obj.wallet.owner_id
+        )
+        self.assertEqual(balance_correction.amount, 1000)
+        # Test when balance is the same = no change
+        correction_obj = api.calculate_correction(
+            new_balance=Money(1000, 'SEK'),
+            user=user_obj,
+            owner_id=wallet_obj.owner_id
+        )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type.value, 0)
+        self.assertEqual(correction_obj.pre_balance.amount, 1000)
+        self.assertEqual(correction_obj.amount.amount, 0)
+        _, balance_correction = wallet_api.get_balance(
+            correction_obj.wallet.owner_id
+        )
+        self.assertEqual(balance_correction.amount, 1000)
+
+    def test_make_deposit_or_withdrawal(self):
+        wallet_obj = WalletFactory.create()
+        WalletTrxFactory.create(
+            wallet=wallet_obj,
+            amount=Money(1000, 'SEK'),
+            trx_status=TrxStatus.FINALIZED
+        )
+        user_obj = User.objects.create_superuser(
+            'the_baconator', 'bacon@foobar.com', '123'
+        )
+        # Test a deposit
+        correction_obj = api.make_deposit_or_withdrawal(
+            amount=Money(100, 'SEK'),
+            user=user_obj,
+            owner_id=wallet_obj.owner_id
+         )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type, enums.TrxType.DEPOSIT)
+        self.assertEqual(correction_obj.pre_balance.amount, 1000)
+        self.assertEqual(correction_obj.amount.amount, 100)
+        _, balance = wallet_api.get_balance(wallet_obj.owner_id)
+        self.assertEqual(balance.amount, 1100)
+        # Test a withdraw
+        correction_obj = api.make_deposit_or_withdrawal(
+            amount=Money(-50, 'SEK'),
+            user=user_obj, owner_id=wallet_obj.owner_id
+        )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type, enums.TrxType.WITHDRAWAL)
+        self.assertEqual(correction_obj.pre_balance.amount, 1100)
+        self.assertEqual(correction_obj.amount.amount, -50)
+        _, balance = wallet_api.get_balance(wallet_obj.owner_id)
+        self.assertEqual(balance.amount, 1050)
+        # Test when user tries to deposit or withdraw 0
+        correction_obj = api.make_deposit_or_withdrawal(
+            amount=Money(0, 'SEK'),
+            user=user_obj,
+            owner_id=wallet_obj.owner_id
+        )
+        self.assertEqual(correction_obj.wallet.owner_id, wallet_obj.owner_id)
+        self.assertEqual(correction_obj.trx_type, enums.TrxType.CORRECTION)
+        self.assertEqual(correction_obj.pre_balance.amount, 1050)
+        self.assertEqual(correction_obj.amount.amount, 0)
+        _, balance = wallet_api.get_balance(wallet_obj.owner_id)
+        self.assertEqual(balance.amount, 1050)

@@ -1,0 +1,28 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="{% url 'wallet_management' obj_id=cash_wallet.owner_id %}" >
+            <span class="ladda-label">Add Wallet Correction</span>
+        </a>
+    </li>
+{{ block.super }}
+<script type="text/javascript">
+	(function($) {
+	    $(document).ready(function() {
+	        $('#result_list tr td:nth-child(6)').each(function() {
+	            if (parseInt($(this).text()) < 0) {
+	                $(this).css('background-color', '#e49595');
+	            }
+	            else if(parseInt($(this).text()) > 0){
+	            	$(this).css('background-color', '#acd7a7');
+	            }
+	            else{
+	            	$(this).css('background-color', '#c0d9f1');
+	            }
+	        });
+	    });
+	})(django.jQuery);
+</script>
+{% endblock %}
+

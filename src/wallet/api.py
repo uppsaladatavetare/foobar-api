@@ -24,6 +24,17 @@ def get_balance(owner_id, currency):
     return wallet_obj, wallet_obj.balance
 
 
+@transaction.atomic
+def set_balance(owner_id, new_balance, reference=None):
+    wallet, old_balance = get_balance(owner_id, new_balance.currency)
+    difference = new_balance - old_balance
+    if difference.amount < 0:
+        return withdraw(owner_id, -difference, reference), difference
+    elif difference.amount > 0:
+        return deposit(owner_id, difference, reference), difference
+    return None, difference
+
+
 def list_transactions(owner_id, currency, trx_type=None, trx_status=None,
                       start=None, limit=None):
     """Return a list of transactions matching the criteria."""
