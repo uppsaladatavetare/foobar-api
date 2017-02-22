@@ -23,5 +23,4 @@ class WalletTrxFactory(factory.django.DjangoModelFactory):
 
     wallet = factory.SubFactory(WalletFactory)
     amount = FuzzyMoney(0, 100000)
-    trx_type = enums.TrxType.INCOMING
-    trx_status = enums.TrxStatus.PENDING
+    trx_type = enums.TrxType.FINALIZED

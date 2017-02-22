@@ -15,7 +15,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('wallet', '0006_auto_20170217_1540'),
+        ('wallet', '0006_auto_20170130_1430'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('foobar', '0016_migrate_product_trx_references'),
     ]

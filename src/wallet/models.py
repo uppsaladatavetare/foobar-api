@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
-from djmoney.models.fields import MoneyField
 from django.utils.translation import ugettext_lazy as _
+from djmoney.models.fields import MoneyField
 from moneyed import Money
 from bananas.models import TimeStampedModel, UUIDModel
 from enumfields import EnumIntegerField
@@ -34,30 +34,27 @@ class Wallet(UUIDModel):
 
 
 class WalletTrxsQuerySet(models.QuerySet):
-    def pending_or_finalized(self):
-        return self.filter(trx_status__in=[enums.TrxStatus.PENDING,
-                                           enums.TrxStatus.FINALIZED])
-
-    def pending(self):
-        return self.filter(trx_status=enums.TrxStatus.PENDING)
-
-    def finalized(self):
-        return self.filter(trx_status=enums.TrxStatus.FINALIZED)
-
     def outgoing(self):
-        return self.filter(trx_type=enums.TrxType.OUTGOING)
+        return self.filter(amount__lt=0)
 
     def incoming(self):
-        return self.filter(trx_type=enums.TrxType.INCOMING)
+        return self.filter(amount__gt=0)
+
+    def by_direction(self, direction):
+        if direction == enums.TrxDirection.OUTGOING:
+            return self.outgoing()
+        else:
+            return self.incoming()
+
+    def countable(self):
+        return self.exclude(trx_type=enums.TrxType.PENDING)
 
     def sum(self, currency=None):
         amount = self.aggregate(amount=models.Sum('amount'))['amount']
         return Money(amount or 0, currency or settings.DEFAULT_CURRENCY)
 
     def balance(self, currency=None):
-        incoming = self.finalized().incoming().sum(currency)
-        outgoing = self.pending_or_finalized().outgoing().sum(currency)
-        return incoming - outgoing
+        return self.countable().sum(currency)
 
 
 class WalletTransaction(UUIDModel, TimeStampedModel):
@@ -65,43 +62,34 @@ class WalletTransaction(UUIDModel, TimeStampedModel):
     amount = MoneyField(
         max_digits=10,
         decimal_places=2,
-        default_currency=settings.DEFAULT_CURRENCY
+        default_currency=settings.DEFAULT_CURRENCY,
+        help_text=_('Positive amount to deposit money. '
+                    'Negative amount to withdraw money.')
     )
     trx_type = EnumIntegerField(
         enums.TrxType,
         verbose_name=_('type'),
-        default=enums.TrxType.INCOMING
-    )
-    trx_status = EnumIntegerField(
-        enums.TrxStatus,
-        verbose_name=_('status'),
-        default=enums.TrxStatus.FINALIZED
+        default=enums.TrxType.FINALIZED
     )
     reference = models.CharField(max_length=128, blank=True, null=True)
+    internal_reference = models.ForeignKey('self', blank=True, null=True)
 
     objects = WalletTrxsQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _('transaction')
+        verbose_name_plural = _('transactions')
 
     @property
     def signed_amount(self):
         """Returns the amount in a signed form based on the trx type"""
-        if self.trx_type == enums.TrxType.INCOMING:
-            return self.amount
-        else:
-            return -self.amount
+        return self.amount
 
     @property
     def countable(self):
         """Returns a boolean depending on if the transactions counts or not.
 
-        For example, rejected transactions does not contribute to
-        the wallet balance.
+        For example, rejected transactions do not contribute to the wallet
+        balance.
         """
-        if self.trx_type == enums.TrxType.INCOMING:
-            return self.trx_status == enums.TrxStatus.FINALIZED
-        else:
-            return self.trx_status in [enums.TrxStatus.PENDING,
-                                       enums.TrxStatus.FINALIZED]
-
-    class Meta:
-        verbose_name = _('transaction')
-        verbose_name_plural = _('transactions')
+        return self.trx_type != enums.TrxType.PENDING

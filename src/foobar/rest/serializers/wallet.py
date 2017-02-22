@@ -21,7 +21,6 @@ class NewWalletTrxSerializer(serializers.Serializer):
 
 class WalletTrxSerializer(NewWalletTrxSerializer):
     trx_type = IntEnumField()
-    trx_status = IntEnumField()
 
 
 class WalletTrxParamsSerializer(serializers.Serializer):

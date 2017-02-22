@@ -4,7 +4,7 @@ from foobar import api, enums, models
 from foobar.wallet import api as wallet_api
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxStatus
+from wallet.enums import TrxType
 from .factories import AccountFactory, CardFactory
 from moneyed import Money
 from django.contrib.auth.models import User
@@ -46,7 +46,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         product_obj1 = ProductFactory.create(
             code='1337733113370',
@@ -79,7 +79,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         product_obj1 = ProductFactory.create(
             code='1337733113370',
@@ -163,7 +163,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         product_obj1 = ProductFactory.create(
             code='1337733113370',
@@ -183,7 +183,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         product_obj1 = ProductFactory.create(
             code='1337733113370',
@@ -202,7 +202,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         user_obj = User.objects.create_superuser(
             'the_baconator', 'bacon@foobar.com', '123'
@@ -255,7 +255,7 @@ class FoobarAPITest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         user_obj = User.objects.create_superuser(
             'the_baconator', 'bacon@foobar.com', '123'

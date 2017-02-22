@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.urlresolvers import reverse_lazy as reverse
 from rest_framework import status
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxType, TrxStatus
+from wallet.enums import TrxType
 from foobar.wallet import Money
 from foobar.rest.fields import MoneyField
 from .base import AuthenticatedAPITestCase
@@ -25,8 +25,7 @@ class TestWalletAPI(AuthenticatedAPITestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(100),
-            trx_type=TrxType.INCOMING,
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         owner_id = wallet_obj.owner_id
         url = reverse('api:wallets-detail', kwargs={'pk': owner_id})
@@ -63,6 +62,14 @@ class TestWalletAPI(AuthenticatedAPITestCase):
             'reference': '321'
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # test
+        url = reverse('api:wallets-deposit', kwargs={'pk': owner_id})
+        response = self.api_client.post(url, data={
+            'owner_id': owner_id,
+            'amount': serialize_money(Money(-10)),
+            'reference': '321'
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_withdraw(self):
         # make the money rain first
@@ -70,8 +77,7 @@ class TestWalletAPI(AuthenticatedAPITestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(10000),
-            trx_type=TrxType.INCOMING,
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         owner_id = wallet_obj.owner_id
         url = reverse('api:wallets-withdraw', kwargs={'pk': owner_id})
@@ -113,8 +119,7 @@ class TestWalletTrxAPI(AuthenticatedAPITestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(100),
-            trx_type=TrxType.INCOMING,
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         owner_id = wallet_obj.owner_id
         url = reverse('api:wallet_trxs-list')

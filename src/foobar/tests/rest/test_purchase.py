@@ -3,7 +3,6 @@ from django.conf import settings
 from rest_framework import status
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxStatus
 from wallet import api as wallet_api
 from foobar.rest.fields import MoneyField
 from ..factories import AccountFactory
@@ -26,8 +25,7 @@ class TestPurchaseAPI(AuthenticatedAPITestCase):
         wallet_obj = WalletFactory.create(owner_id=account_obj.id)
         WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            amount=Money(1000, 'SEK')
         )
         product_obj1 = ProductFactory.create(
             name='Billys Ooriginal',

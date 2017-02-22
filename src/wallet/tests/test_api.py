@@ -17,8 +17,7 @@ class WalletTest(TestCase):
         for _ in range(5):
             factories.WalletTrxFactory.create(
                 wallet=wallet_obj,
-                trx_status=enums.TrxStatus.PENDING,
-                trx_type=enums.TrxType.INCOMING
+                trx_type=enums.TrxType.PENDING
             )
         trxs = api.list_transactions(wallet_obj.owner_id, wallet_obj.currency)
         self.assertEqual(len(trxs), 5)
@@ -36,77 +35,93 @@ class WalletTest(TestCase):
         # test trx_status
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING
+            amount=Money(10, 'SEK'),
+            trx_type=enums.TrxType.FINALIZED
         )
         trxs = api.list_transactions(
             owner_id=wallet_obj.owner_id,
             currency=wallet_obj.currency,
-            trx_status=enums.TrxStatus.FINALIZED
+            trx_type=enums.TrxType.FINALIZED
         )
         self.assertEqual(len(trxs), 1)
 
         # test trx_type
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.OUTGOING
+            trx_type=enums.TrxType.FINALIZED,
+            amount=-Money(10, 'SEK')
         )
         trxs = api.list_transactions(
             owner_id=wallet_obj.owner_id,
             currency=wallet_obj.currency,
-            trx_type=enums.TrxType.OUTGOING
+            direction=enums.TrxDirection.OUTGOING
         )
         self.assertEqual(len(trxs), 1)
+        trxs = api.list_transactions(
+            owner_id=wallet_obj.owner_id,
+            currency=wallet_obj.currency,
+            direction=enums.TrxDirection.INCOMING
+        )
+        self.assertEqual(len(trxs), 6)
 
     def test_get_balance(self):
         wallet_obj = factories.WalletFactory.create()
-        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        self.assertEqual(balance, Money(0, wallet_obj.currency))
+        _, balance1 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        _, balance2 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency,
+                                      cached=False)
+        self.assertEqual(balance1, Money(0, wallet_obj.currency))
+        self.assertEqual(balance1, balance2)
         # deposit 100 and mark as pending
         # pending and incoming transactions should not affect the balance
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.PENDING,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.PENDING,
             amount=Money(100, wallet_obj.currency)
         )
-        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        self.assertEqual(balance, Money(0, wallet_obj.currency))
+        _, balance1 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        _, balance2 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency,
+                                      cached=False)
+        self.assertEqual(balance1, Money(0, wallet_obj.currency))
+        self.assertEqual(balance1, balance2)
         # deposit 100 and mark as finalized
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(100, wallet_obj.currency)
         )
-        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        self.assertEqual(balance, Money(100, wallet_obj.currency))
+        _, balance1 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        _, balance2 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency,
+                                      cached=False)
+        self.assertEqual(balance1, Money(100, wallet_obj.currency))
+        self.assertEqual(balance1, balance2)
         # withdraw 50 and mark as pending
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.PENDING,
-            trx_type=enums.TrxType.OUTGOING,
-            amount=Money(50, wallet_obj.currency)
+            trx_type=enums.TrxType.FINALIZED,
+            amount=-Money(50, wallet_obj.currency)
         )
-        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        self.assertEqual(balance, Money(50, wallet_obj.currency))
+        _, balance1 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        _, balance2 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency,
+                                      cached=False)
+        self.assertEqual(balance1, Money(50, wallet_obj.currency))
+        self.assertEqual(balance1, balance2)
         # withdraw 50 and mark as finalized
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.OUTGOING,
-            amount=Money(50, wallet_obj.currency)
+            trx_type=enums.TrxType.FINALIZED,
+            amount=-Money(50, wallet_obj.currency)
         )
-        _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        self.assertEqual(balance, Money(0, wallet_obj.currency))
+        _, balance1 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
+        _, balance2 = api.get_balance(wallet_obj.owner_id, wallet_obj.currency,
+                                      cached=False)
+        self.assertEqual(balance1, Money(0, wallet_obj.currency))
+        self.assertEqual(balance1, balance2)
 
     def test_set_balance(self):
         wallet_obj = factories.WalletFactory.create()
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(1000, wallet_obj.currency)
         )
         _, diff = api.set_balance(wallet_obj.owner_id, Money(800, 'SEK'))
@@ -126,8 +141,7 @@ class WalletTest(TestCase):
         wallet_obj = factories.WalletFactory.create()
         factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(100, wallet_obj.currency)
         )
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
@@ -155,8 +169,7 @@ class WalletTest(TestCase):
         wallet_obj2 = factories.WalletFactory.create(balance_currency='SEK')
         factories.WalletTrxFactory.create(
             wallet=wallet_obj1,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(100, wallet_obj1.currency)
         )
         api.transfer(wallet_obj1.owner_id, wallet_obj2.owner_id,
@@ -175,8 +188,7 @@ class WalletTest(TestCase):
         wallet_obj = factories.WalletFactory.create()
         trx_obj1 = factories.WalletTrxFactory.create(
             wallet=wallet_obj,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(100, wallet_obj.currency),
             reference='1337'
         )
@@ -189,13 +201,15 @@ class WalletTest(TestCase):
     def test_cancel_transaction(self):
         wallet_obj = factories.WalletFactory.create()
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
-        trx_obj = api.deposit(wallet_obj.owner_id,
-                              Money(100, wallet_obj.currency))
-        self.assertIsNotNone(trx_obj)
+        trx_obj1 = api.deposit(wallet_obj.owner_id,
+                               Money(100, wallet_obj.currency))
+        self.assertIsNotNone(trx_obj1)
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
         self.assertEqual(balance, Money(100, wallet_obj.currency))
-        api.cancel_transaction(trx_obj.id)
-        self.assertIsNotNone(trx_obj)
+        trx_obj2 = api.cancel_transaction(trx_obj1.id)
+        self.assertIsNotNone(trx_obj2)
+        self.assertEqual(trx_obj2.trx_type, enums.TrxType.CANCELLATION)
+        self.assertEqual(trx_obj2.internal_reference, trx_obj1)
         _, balance = api.get_balance(wallet_obj.owner_id, wallet_obj.currency)
         self.assertEqual(balance, Money(0, wallet_obj.currency))
 
@@ -203,28 +217,24 @@ class WalletTest(TestCase):
         wallet_obj1 = factories.WalletFactory.create()
         factories.WalletTrxFactory.create(
             wallet=wallet_obj1,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(100, wallet_obj1.currency)
         )
         wallet_obj2 = factories.WalletFactory.create()
         factories.WalletTrxFactory.create(
             wallet=wallet_obj2,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.FINALIZED,
             amount=Money(500, wallet_obj1.currency)
         )
         factories.WalletTrxFactory.create(
             wallet=wallet_obj2,
-            trx_status=enums.TrxStatus.PENDING,
-            trx_type=enums.TrxType.INCOMING,
+            trx_type=enums.TrxType.PENDING,
             amount=Money(500, wallet_obj1.currency)
         )
         factories.WalletTrxFactory.create(
             wallet=wallet_obj2,
-            trx_status=enums.TrxStatus.FINALIZED,
-            trx_type=enums.TrxType.OUTGOING,
-            amount=Money(100, wallet_obj1.currency)
+            trx_type=enums.TrxType.FINALIZED,
+            amount=-Money(100, wallet_obj1.currency)
         )
         total = api.total_balance(wallet_obj1.currency)
         self.assertEqual(total, Money(500, wallet_obj1.currency))

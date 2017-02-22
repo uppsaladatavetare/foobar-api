@@ -1,6 +1,6 @@
 from django.test import TestCase
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxStatus
+from wallet.enums import TrxType
 from moneyed import Money
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -18,7 +18,7 @@ class FoobarViewTest(TestCase):
         WalletTrxFactory.create(
             wallet=wallet_obj,
             amount=Money(1200, 'SEK'),
-            trx_status=TrxStatus.FINALIZED
+            trx_type=TrxType.FINALIZED
         )
         url = reverse('wallet_management',
                       kwargs={'obj_id': wallet_obj.owner_id})
