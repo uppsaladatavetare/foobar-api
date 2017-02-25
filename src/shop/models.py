@@ -254,6 +254,7 @@ class Product(UUIDModel, TimeStampedModel):
         currency_choices=settings.CURRENCY_CHOICES
     )
     active = models.BooleanField(default=True)
+    out_of_stock_forecast = models.DateField(blank=True, null=True)
 
     # cached quantity
     qty = models.IntegerField(verbose_name=_('quantity'), default=0)

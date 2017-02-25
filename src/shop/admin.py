@@ -1,4 +1,5 @@
 import tempfile
+from datetime import date
 from django import forms
 from django.shortcuts import get_object_or_404
 from django.contrib import admin, messages
@@ -421,10 +422,12 @@ class ProductTransactionCreatorInline(admin.TabularInline):
 
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'qty', 'price', 'active',)
+    list_display = ('name', 'code', 'qty', 'price', 'active',
+                    '_out_of_stock_forecast',)
     list_filter = ('active', 'category',)
     search_fields = ('code', 'name',)
-    readonly_fields = ('qty', 'date_created', 'date_modified',)
+    readonly_fields = ('qty', 'date_created', 'date_modified',
+                       '_out_of_stock_forecast',)
     ordering = ('name',)
     inlines = (ProductTransactionCreatorInline,)
     fieldsets = (
@@ -444,9 +447,20 @@ class ProductAdmin(admin.ModelAdmin):
                 'qty',
                 'date_created',
                 'date_modified',
+                '_out_of_stock_forecast'
             )
         }),
     )
+
+    def _out_of_stock_forecast(self, obj=None):
+        if obj is None or obj.out_of_stock_forecast is None:
+            return None
+        fmt = '<span style="color: {};">{}</span>'
+        forecast = obj.out_of_stock_forecast
+        color = 'red' if forecast <= date.today() else 'default'
+        return fmt.format(color, forecast)
+    _out_of_stock_forecast.allow_tags = True
+    _out_of_stock_forecast.admin_order_field = 'out_of_stock_forecast'
 
     class Media:
         css = {

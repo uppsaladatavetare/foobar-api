@@ -1,6 +1,12 @@
 import logging
+import numpy as np
+from itertools import accumulate
+from datetime import date
 from django.db import transaction
+from django.db.models import Sum
+from django.db.models.functions import TruncDay
 from django.contrib.contenttypes.models import ContentType
+from sklearn.svm import SVR
 from . import models, enums, suppliers, exceptions
 
 log = logging.getLogger(__name__)
@@ -239,3 +245,89 @@ def assign_free_stocktake_chunk(user_id, stocktake_id):
     chunk_obj.owner_id = user_id
     chunk_obj.save()
     return chunk_obj
+
+
+@transaction.atomic
+def predict_quantity(product_id, target):
+    """Predicts when a product will reach the target quantity."""
+    product_obj = models.Product.objects.get(id=product_id)
+    if product_obj.qty <= target:
+        # No prediction if already at the target quantity.
+        return None
+
+    # Find the last restock transaction
+    qs = product_obj.transactions.finalized()
+    restock_trx = qs.restocks().order_by('-date_created').first()
+    if restock_trx is None:
+        # The product has never been restocked.
+        return None
+
+    initial_qty = qs \
+        .filter(date_created__lte=restock_trx.date_created) \
+        .aggregate(qty=Sum('qty'))['qty'] or 0
+    trx_objs = qs \
+        .filter(date_created__gt=restock_trx.date_created) \
+        .annotate(date=TruncDay('date_created')) \
+        .values('date') \
+        .annotate(aggregated_qty=Sum('qty')) \
+        .values('date', 'aggregated_qty')
+    if not trx_objs:
+        # No data points to base the prediction on.
+        return None
+
+    date_offset = trx_objs[0]['date'].toordinal()
+
+    # At this point we want to generate data-points that we will feed into a
+    # Epsilon-Support Vector Regression model. Initially, the data-points
+    # look like following:
+    #
+    # +---+----+-----+----+----+
+    # | x | 0  |  1  | 2  | 4  |
+    # +---+----+-----+----+----+
+    # | y | -5 | -10 | -2 | -3 |
+    # +---+----+-----+----+----+
+    #
+    # We want however to include the initial quantity and we do that by adding
+    # it at x = -1:
+    #
+    # +---+-----+----+-----+----+----+
+    # | x | -1  | 0  |  1  | 2  | 4  |
+    # +---+-----+----+-----+----+----+
+    # | y | 100 | -5 | -10 | -2 | -3 |
+    # +---+-----+----+-----+----+----+
+    #
+    # In the final step, we want to convert all the values at x >= 0 into
+    # actuall quantity levels, not just differences, so the data looks like
+    # this:
+    #
+    # +---+-----+----+----+----+----+
+    # | x | -1  | 0  | 1  | 2  | 4  |
+    # +---+-----+----+----+----+----+
+    # | y | 100 | 95 | 85 | 83 | 80 |
+    # +---+-----+----+----+----+----+
+    #
+    # The cryptic code below does just that.
+    x = [trx_obj['date'].toordinal() - date_offset for trx_obj in trx_objs]
+    x = [-1] + x
+    x = np.asarray(x).reshape(-1, 1)
+
+    y = [trx_obj['aggregated_qty'] for trx_obj in trx_objs]
+    y = [initial_qty] + y
+    y = np.asarray(list(accumulate(y)))
+
+    # Fit the SVR model using above data. We rely here on the linear kernel as
+    # our experiments showed that that gave the best results.
+    svr = SVR(kernel='linear', C=1e2)
+    svr.fit(x, y)
+    if svr.coef_ >= 0:
+        # The function is non-decreasing, so no prediction can be made.
+        return None
+    days = (-initial_qty / svr.coef_).astype(int).item()
+    return date.fromordinal(date_offset + days)
+
+
+@transaction.atomic
+def update_out_of_stock_forecast(product_id):
+    product_obj = models.Product.objects.get(id=product_id)
+    product_obj.out_of_stock_forecast = predict_quantity(product_id, target=0)
+    product_obj.save()
