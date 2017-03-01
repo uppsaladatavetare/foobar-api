@@ -1,7 +1,7 @@
 # foobar-api
 
-[![Travis CI](https://travis-ci.org/uppsaladatavetare/foobar-api.png)](https://travis-ci.org/uppsaladatavetare/foobar-api)
-[![Codecov](https://codecov.io/gh/uppsaladatavetare/foobar-api/coverage.png)](https://codecov.io/gh/uppsaladatavetare/foobar-api/)
+[![Travis CI](https://travis-ci.org/uppsaladatavetare/foobar-api.svg)](https://travis-ci.org/uppsaladatavetare/foobar-api)
+[![Codecov](https://codecov.io/gh/uppsaladatavetare/foobar-api/coverage.svg?branch=master)](https://codecov.io/gh/uppsaladatavetare/foobar-api/)
 
 This repository contains the backend for the FooBar kiosk and inventory system.
 
