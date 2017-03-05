@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import permission_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import redirect
+from django.utils.translation import ugettext_lazy as _
 from . import api
 from django.shortcuts import render
 from .forms import CorrectionForm, DepositForm
@@ -13,6 +14,10 @@ from foobar.wallet.api import get_wallet
 @permission_required('foobar.change_account')
 def account_for_card(request, card_id):
     account_obj = api.get_account(card_id)
+    if account_obj is None:
+        messages.add_message(request, messages.ERROR,
+                             _('No account has been found for given card.'))
+        return redirect('admin:foobar_account_changelist')
     return redirect('admin:foobar_account_change', account_obj.id)
 
 
