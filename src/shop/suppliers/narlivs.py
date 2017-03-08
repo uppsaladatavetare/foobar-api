@@ -86,15 +86,25 @@ class SupplierAPI(SupplierBase):
 
         for item in items:
             if item['description'].startswith('PANT '):
+                prev_item = consolidated_items[-1]
+
                 # For some drinks, the quantity in the report is incorrect
                 # and it is not equal to the quantity of the pant. The pant
                 # quantity seems however to be always correct, so we
                 # set it as the quantity of the drink.
-                if consolidated_items[-1]['qty'] != item['qty']:
-                    consolidated_items[-1]['qty'] = item['qty']
-                    consolidated_items[-1]['price'] /= item['qty']
-                consolidated_items[-1]['net_price'] += item['net_price']
-                consolidated_items[-1]['price'] += item['price']
+                if prev_item['qty'] != item['qty']:
+                    prev_item['qty'] = item['qty']
+                    prev_item['price'] = prev_item['net_price'] / item['qty']
+                prev_item['net_price'] += item['net_price']
+                prev_item['price'] += item['price']
+
+                # Let's make sure that the computed price is correct
+                prev_computed_net_price = prev_item['price'] * prev_item['qty']
+                if prev_item['net_price'] != prev_computed_net_price:
+                    msg = ('The computed price and quantity seem to be wrong '
+                           'for product with SKU {} (probably a report '
+                           'parser issue).')
+                    raise SupplierAPIException(msg.format(item['sku']))
             else:
                 consolidated_items.append(item)
 
