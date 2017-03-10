@@ -29,7 +29,6 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 # Application definition
 INSTALLED_APPS = (
     'rest_framework',
-    'rest_framework_swagger',
 
     'shop',
     'wallet',

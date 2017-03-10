@@ -2,17 +2,17 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 
-from rest_framework_swagger.views import get_swagger_view
 import foobar.views
 import rest_framework.urls
+from rest_framework.documentation import include_docs_urls
 
 from .rest.urls import router
 
-schema_view = get_swagger_view(title='FooBar API')
+API_TITLE = 'FooBar API'
 
 urlpatterns = [
     url(r'^api/', include(router.urls, namespace='api')),
-    url(r'^docs/', schema_view),
+    url(r'^docs/', include_docs_urls(title=API_TITLE)),
     url(r'^api-auth/', include(rest_framework.urls,
         namespace='rest_framework')),
     url(r'^admin/wallet_management/(?P<obj_id>.+)',
