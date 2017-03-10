@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
 from unittest import mock
 
@@ -8,27 +8,14 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from ..suppliers.base import SupplierBase, DeliveryItem, SupplierProduct
+from ..suppliers.base import (
+    DeliveryItem,
+    SupplierAPIException,
+    SupplierProduct
+)
 from .. import api, models, enums, exceptions
 from .models import DummyModel
 from . import factories
-
-
-class DummySupplierAPI(SupplierBase):
-    def parse_delivery_report(self, report_path):
-        return [
-            DeliveryItem(
-                sku='101176931',
-                qty=20,
-                price=Decimal('9.25')
-            )
-        ]
-
-    def retrieve_product(self, sku):
-        return SupplierProduct(
-            name='Billys Original',
-            price=Decimal('9.25')
-        )
 
 
 class ShopAPITest(TestCase):
@@ -116,9 +103,7 @@ class ShopAPITest(TestCase):
         objs = api.list_products(name__startswith='Billys')
         self.assertEqual(len(objs), 1)
 
-    @mock.patch('shop.suppliers.get_supplier_api')
-    def test_get_supplier_product_existing(self, mock_get_supplier_api):
-        mock_get_supplier_api.return_value = DummySupplierAPI()
+    def test_get_supplier_product_existing(self):
         supplier_obj = factories.SupplierFactory.create()
         factories.SupplierProductFactory.create(
             supplier=supplier_obj,
@@ -133,7 +118,12 @@ class ShopAPITest(TestCase):
 
     @mock.patch('shop.suppliers.get_supplier_api')
     def test_get_supplier_product_non_existing(self, mock_get_supplier_api):
-        mock_get_supplier_api.return_value = DummySupplierAPI()
+        m = mock_get_supplier_api.return_value = mock.MagicMock()
+        m.retrieve_product.return_value = SupplierProduct(
+            name='Billys Original',
+            price=Decimal('9.25'),
+            units=1
+        )
         supplier_obj = factories.SupplierFactory.create()
         product_obj = api.get_supplier_product(supplier_obj.id, '101176931')
         self.assertIsNotNone(product_obj)
@@ -142,7 +132,14 @@ class ShopAPITest(TestCase):
 
     @mock.patch('shop.suppliers.get_supplier_api')
     def test_populate_delivery(self, mock_get_supplier_api):
-        mock_get_supplier_api.return_value = DummySupplierAPI()
+        m = mock_get_supplier_api.return_value = mock.MagicMock()
+        m.parse_delivery_report.return_value = [
+            DeliveryItem(
+                sku='101176931',
+                qty=20,
+                price=Decimal('9.25')
+            )
+        ]
         supplier_obj = factories.SupplierFactory.create()
         factories.SupplierProductFactory.create(
             supplier=supplier_obj,
@@ -334,7 +331,8 @@ class ShopAPITest(TestCase):
         ]
         product = factories.ProductFactory.create()
         # No product transactions yet
-        timestamp = api.predict_quantity(product.id, product.qty - 1)
+        timestamp = api.predict_quantity(product.id, product.qty - 1,
+                                         current_date=date(2016, 11, 18))
         self.assertIsNone(timestamp)
         factories.ProductTrxFactory.create(
             product=product,
@@ -343,7 +341,8 @@ class ShopAPITest(TestCase):
             date_created=timezone.make_aware(initial_timestamp)
         )
         # Product restocked, but no purchases made yet
-        timestamp = api.predict_quantity(product.id, 0)
+        timestamp = api.predict_quantity(product.id, 0,
+                                         current_date=date(2016, 11, 18))
         self.assertIsNone(timestamp)
         for qty, timestamp in trx_data:
             factories.ProductTrxFactory.create(
@@ -353,9 +352,11 @@ class ShopAPITest(TestCase):
                 trx_type=enums.TrxType.PURCHASE
             )
         timestamp = api.predict_quantity(product.id,
-                                         target=product.qty)
+                                         target=product.qty,
+                                         current_date=date(2016, 11, 18))
         self.assertIsNone(timestamp)
-        timestamp = api.predict_quantity(product.id, 0)
+        timestamp = api.predict_quantity(product.id, 0,
+                                         current_date=date(2016, 11, 18))
         self.assertEqual(timestamp, date(2016, 11, 30))
 
     def test_predict_quantity_non_decreasing_function(self):
@@ -391,3 +392,80 @@ class ShopAPITest(TestCase):
         predict_quantity_mock.assert_called_once_with(product.id, target=0)
         product.refresh_from_db()
         self.assertEqual(product.out_of_stock_forecast, date(1337, 1, 1))
+
+    @mock.patch('shop.suppliers.get_supplier_api')
+    def test_order_from_supplier(self, mock_get_supplier_api):
+        mock_supplier_api = mock.MagicMock()
+        mock_get_supplier_api.return_value = mock_supplier_api
+        mock_order_product = mock_supplier_api.order_product
+        supplier1 = factories.SupplierFactory()
+        supplier2 = factories.SupplierFactory()
+        product1 = factories.ProductFactory()
+        product2 = factories.ProductFactory()
+        sp1 = factories.SupplierProductFactory(
+            product=product1,
+            supplier=supplier1,
+            price=5,
+            units=64
+        )
+        sp2 = factories.SupplierProductFactory(
+            product=product1,
+            supplier=supplier1,
+            price=10,
+            units=30
+        )
+        sp3 = factories.SupplierProductFactory(
+            product=product1,
+            supplier=supplier1,
+            price=40,
+            qty_multiplier=10,
+            units=1
+        )
+        factories.SupplierProductFactory(
+            product=product2,
+            supplier=supplier2,
+            price=1,
+            units=1
+        )
+        sp5 = api.order_from_supplier(product1.id, 48)
+        mock_order_product.assert_called_once_with(sp3.sku, 5)
+        self.assertEqual(sp3.id, sp5.id)
+        # Let's break the supplier API and see what happens.
+        mock_order_product.reset_mock()
+        mock_order_product.side_effect = SupplierAPIException
+        with self.assertRaises(exceptions.APIException):
+            api.order_from_supplier(product1.id, 48)
+        mock_order_product.assert_has_calls([
+            mock.call(sp3.sku, 5),
+            mock.call(sp1.sku, 1),
+            mock.call(sp2.sku, 2),
+        ])
+
+    @mock.patch('shop.api.order_from_supplier')
+    def test_order_refill(self, mock_order_from_supplier):
+        current_date = date(2017, 3, 2)
+        product1 = factories.ProductFactory(
+            qty=15,
+            out_of_stock_forecast=date(2017, 3, 8)
+        )
+        product2 = factories.ProductFactory(
+            qty=10,
+            out_of_stock_forecast=date(2017, 3, 15)
+        )
+        factories.BaseStockLevel(product=product1, level=48)
+        factories.BaseStockLevel(product=product2, level=32)
+        supplier = factories.SupplierFactory(
+            delivers_on=enums.Weekdays.WEDNESDAY.value
+        )
+        factories.SupplierProductFactory(
+            supplier=supplier,
+            product=product1
+        )
+        factories.SupplierProductFactory(
+            supplier=supplier,
+            product=product2
+        )
+        api.order_refill(supplier.id, current_date)
+        mock_order_from_supplier.assert_has_calls([
+            mock.call(product1.id, 48, supplier_id=supplier.id)
+        ])

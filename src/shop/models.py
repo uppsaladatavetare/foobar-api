@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from django.core.files.storage import FileSystemStorage
+from django.core.validators import MinValueValidator
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from bananas.models import TimeStampedModel, UUIDModel
@@ -45,9 +46,18 @@ def generate_delivery_report_filename(instance, filename):
     )
 
 
+class BaseStockLevel(UUIDModel):
+    product = models.OneToOneField('Product')
+    level = models.SmallIntegerField('Base quantity')
+
+    def __str__(self):
+        return self.product.name
+
+
 class Supplier(UUIDModel):
     name = models.CharField(max_length=32)
     internal_name = models.CharField(max_length=32)
+    delivers_on = models.SmallIntegerField(choices=enums.Weekdays.choices())
 
     class Meta:
         verbose_name = _('supplier')
@@ -75,17 +85,28 @@ class SupplierProduct(UUIDModel, TimeStampedModel):
     image = models.ImageField(blank=True, null=True,
                               upload_to=generate_supplier_product_filename,
                               storage=OverwriteFileSystemStorage())
+    units = models.SmallIntegerField(default=1)
     qty_multiplier = models.PositiveIntegerField(
         verbose_name=_('Quantity multiplier'),
         help_text=_('The quantity in the report will be multiplied by this '
                     'value.'),
-        default=1
+        default=1,
+        validators=[MinValueValidator(0)]
     )
 
     class Meta:
         verbose_name = _('supplier product')
         verbose_name_plural = _('supplier products')
         unique_together = ('supplier', 'sku',)
+
+    @property
+    def unit_price(self):
+        return self.price / self.qty_multiplier
+
+    @property
+    def qty(self):
+        """Number of the units in a single package at the supplier."""
+        return self.qty_multiplier * self.units
 
     def __str__(self):
         return self.name

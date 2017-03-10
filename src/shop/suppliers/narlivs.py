@@ -3,8 +3,9 @@ import decimal
 import subprocess
 import tempfile
 
+import narlivs
+
 from django.conf import settings
-from narlivs import Narlivs
 
 from .base import (
     DeliveryItem,
@@ -45,7 +46,7 @@ def pdf_to_text(path):
     Depends on the external pdftotext command line tool.
     """
     with tempfile.NamedTemporaryFile(mode='r') as f:
-        code = subprocess.call(['pdftotext', '-layout', path, f.name])
+        code = subprocess.call(['pdftotext', '-q', '-layout', path, f.name])
         if code != 0:
             return None
         return f.read()
@@ -55,7 +56,7 @@ class SupplierAPI(SupplierBase):
     """Supplier API implementation for Axfood Närlivs."""
 
     def __init__(self):
-        self.narlivs = Narlivs(
+        self.narlivs = narlivs.Narlivs(
             username=settings.NARLIVS_USERNAME,
             password=settings.NARLIVS_PASSWORD
         )
@@ -125,7 +126,14 @@ class SupplierAPI(SupplierBase):
 
     def retrieve_product(self, sku):
         data = self.narlivs.get_product(sku=sku).data
-        return SupplierProduct(
-            name=data['name'].title(),
-            price=data['price']
-        )
+        if data is not None:
+            return SupplierProduct(
+                name=data['name'].title(),
+                price=data['price'],
+                units=data['units']
+            )
+        return None
+
+    def order_product(self, sku, qty):
+        for _ in range(qty):
+            self.narlivs.get_cart().add_product(sku)

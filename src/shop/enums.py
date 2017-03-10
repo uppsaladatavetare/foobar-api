@@ -21,3 +21,17 @@ class TrxType(enum.Enum):
 class TrxStatus(enum.Enum):
     FINALIZED = 0
     CANCELED = 1
+
+
+class Weekdays(enum.Enum):
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
+
+    @classmethod
+    def choices(cls):
+        return [(x.value, x.name) for x in cls]

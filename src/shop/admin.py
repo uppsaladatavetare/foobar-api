@@ -11,12 +11,43 @@ from .suppliers.base import SupplierAPIException
 from . import models, api, exceptions
 
 
+def format_out_of_stock_forecast(forecast):
+    if forecast is None:
+        return None
+    fmt = '<span style="color: {};">{}</span>'
+    color = 'red' if forecast <= date.today() else 'default'
+    return fmt.format(color, forecast)
+
+
 class ReadonlyMixin:
     def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(models.BaseStockLevel)
+class BaseStockLevelAdmin(admin.ModelAdmin):
+    list_display = ('product_name', 'level', 'product_qty',
+                    'out_of_stock_forecast',)
+    list_select_related = ('product',)
+
+    def product_name(self, obj):
+        return obj.product.name
+
+    def product_qty(self, obj):
+        return obj.product.qty
+
+    def out_of_stock_forecast(self, obj):
+        return format_out_of_stock_forecast(obj.product.out_of_stock_forecast)
+    out_of_stock_forecast.short_description = _('out of stock forecast')
+    out_of_stock_forecast.allow_tags = True
+    out_of_stock_forecast.admin_order_field = 'product__out_of_stock_forecast'
+
+
+class BaseStockLevelInline(admin.StackedInline):
+    model = models.BaseStockLevel
 
 
 class StocktakeItemInline(ReadonlyMixin, admin.TabularInline):
@@ -207,6 +238,35 @@ class ProductStateFilter(admin.SimpleListFilter):
         if self.value() == 'unassociated':
             return queryset.filter(product=None)
         return queryset
+
+
+@admin.register(models.Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+
+    def order(self, request, obj_id):
+        try:
+            supplier = get_object_or_404(models.Supplier, id=obj_id)
+            supplier_products = api.order_refill(supplier.id)
+            msg = _('Added %d products to the cart at %s.')
+            count = len(supplier_products)
+            self.message_user(request, msg % (count, supplier.name))
+        except exceptions.APIException as e:
+            self.message_user(request, str(e), messages.ERROR)
+        return HttpResponseRedirect(
+            reverse('admin:shop_supplier_change', args=(obj_id,))
+        )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            url(
+                r'^(?P<obj_id>.+)/order/$',
+                self.admin_site.admin_view(self.order),
+                name='supplier-order',
+            ),
+        ]
+        return custom_urls + urls
 
 
 @admin.register(models.SupplierProduct)
@@ -422,14 +482,13 @@ class ProductTransactionCreatorInline(admin.TabularInline):
 
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'qty', 'price', 'active',
-                    '_out_of_stock_forecast',)
+    list_display = ('name', 'code', 'qty', 'price', 'active',)
     list_filter = ('active', 'category',)
     search_fields = ('code', 'name',)
     readonly_fields = ('qty', 'date_created', 'date_modified',
                        '_out_of_stock_forecast',)
     ordering = ('name',)
-    inlines = (ProductTransactionCreatorInline,)
+    inlines = (BaseStockLevelInline, ProductTransactionCreatorInline,)
     fieldsets = (
         (None, {
             'fields': (
@@ -452,16 +511,6 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
 
-    def _out_of_stock_forecast(self, obj=None):
-        if obj is None or obj.out_of_stock_forecast is None:
-            return None
-        fmt = '<span style="color: {};">{}</span>'
-        forecast = obj.out_of_stock_forecast
-        color = 'red' if forecast <= date.today() else 'default'
-        return fmt.format(color, forecast)
-    _out_of_stock_forecast.allow_tags = True
-    _out_of_stock_forecast.admin_order_field = 'out_of_stock_forecast'
-
     class Media:
         css = {
             'all': (
@@ -477,3 +526,9 @@ class ProductAdmin(admin.ModelAdmin):
             'js/thunderpush.js',
             'js/scan-card.js',
         )
+
+    def _out_of_stock_forecast(self, obj):
+        return format_out_of_stock_forecast(obj.out_of_stock_forecast)
+    _out_of_stock_forecast.short_description = _('out of stock forecast')
+    _out_of_stock_forecast.allow_tags = True
+    _out_of_stock_forecast.admin_order_field = 'out_of_stock_forecast'

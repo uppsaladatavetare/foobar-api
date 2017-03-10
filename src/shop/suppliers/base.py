@@ -3,7 +3,7 @@ from collections import namedtuple
 
 
 DeliveryItem = namedtuple('DeliveryItem', ['sku', 'price', 'qty'])
-SupplierProduct = namedtuple('SupplierProduct', ['name', 'price'])
+SupplierProduct = namedtuple('SupplierProduct', ['name', 'price', 'units'])
 
 
 class SupplierAPIException(Exception):
@@ -11,7 +11,12 @@ class SupplierAPIException(Exception):
 
 
 class SupplierBase(metaclass=ABCMeta):
-    """Defines the interface of a supplier module."""
+    """Defines the interface of a supplier module.
+
+    The mysterious SKU all over this class is abbreviation for Stock Keeping
+    Unit and in this context it is basically an unique identifier for every
+    product at supplier.
+    """
 
     @abstractmethod
     def parse_delivery_report(self, report_path):
@@ -31,4 +36,14 @@ class SupplierBase(metaclass=ABCMeta):
         :param sku: SKU of the product to be retrieved.
         :type sku: str
         :rtype: Union[SupplierProduct, None]
+        """
+
+    @abstractmethod
+    def order_product(self, sku, qty):
+        """Places an order on product with given SKU.
+
+        :param sku: SKU of the product to be ordered.
+        :type sku: str
+        :param qty: Quantity.
+        :type qty: int
         """

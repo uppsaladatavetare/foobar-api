@@ -38,6 +38,8 @@ class SupplierFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Supplier
 
+    delivers_on = enums.Weekdays.MONDAY.value
+
 
 class SupplierProductFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -48,6 +50,8 @@ class SupplierProductFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: 'Product #{0}'.format(n))
     sku = factory.Sequence(lambda n: '1{0:010d}'.format(n))
     price = FuzzyMoney(10, 50)
+    qty_multiplier = 1
+    units = 1
 
 
 class DeliveryFactory(factory.django.DjangoModelFactory):
@@ -88,3 +92,11 @@ class StocktakeItemFactory(factory.django.DjangoModelFactory):
     chunk = factory.SubFactory(StocktakeChunkFactory)
     product = factory.SubFactory(ProductFactory)
     qty = factory.fuzzy.FuzzyInteger(1, 50)
+
+
+class BaseStockLevel(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.BaseStockLevel
+
+    product = factory.SubFactory(ProductFactory)
+    level = factory.fuzzy.FuzzyInteger(24, 48)
