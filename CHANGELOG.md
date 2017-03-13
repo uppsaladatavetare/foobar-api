@@ -1,5 +1,24 @@
 # Change Log
 
+## [1.3.0](https://github.com/uppsaladatavetare/foobar-api/tree/1.3.0) (2017-03-13)
+[Full Changelog](https://github.com/uppsaladatavetare/foobar-api/compare/1.2.0...1.3.0)
+
+**Implemented enhancements:**
+
+- Ability to edit user profiles [\#36](https://github.com/uppsaladatavetare/foobar-api/pull/36) ([ElinSwedin](https://github.com/ElinSwedin))
+- Semi-automatic ordering of products from suppliers [\#30](https://github.com/uppsaladatavetare/foobar-api/pull/30) ([kjagiello](https://github.com/kjagiello))
+- Out of stock forecasting [\#25](https://github.com/uppsaladatavetare/foobar-api/pull/25) ([kjagiello](https://github.com/kjagiello))
+- Switching from Swagger to the brand new DRF live docs [\#33](https://github.com/uppsaladatavetare/foobar-api/pull/33) ([kjagiello](https://github.com/kjagiello))
+
+**Fixed bugs:**
+
+- Find account by scanning cart crashes when no account found [\#28](https://github.com/uppsaladatavetare/foobar-api/issues/28)
+
+**Merged pull requests:**
+
+- Correcting the computation of the net price based on pant [\#31](https://github.com/uppsaladatavetare/foobar-api/pull/31) ([kjagiello](https://github.com/kjagiello))
+- Do not crash when the scanned card is not associated with any account [\#29](https://github.com/uppsaladatavetare/foobar-api/pull/29) ([kjagiello](https://github.com/kjagiello))
+
 ## [1.2.0](https://github.com/uppsaladatavetare/foobar-api/tree/1.2.0) (2017-02-23)
 [Full Changelog](https://github.com/uppsaladatavetare/foobar-api/compare/1.1.0...1.2.0)
 
