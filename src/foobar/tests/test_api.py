@@ -8,6 +8,7 @@ from wallet.enums import TrxType
 from .factories import AccountFactory, CardFactory
 from moneyed import Money
 from django.contrib.auth.models import User
+import uuid
 
 
 class FoobarAPITest(TestCase):
@@ -27,18 +28,40 @@ class FoobarAPITest(TestCase):
         self.assertGreater(obj2.date_used, date_used)
 
     def test_get_account(self):
+        # Assure None when missing account
+        id = uuid.uuid4()
+        obj1 = api.get_account(account_id=id)
+        self.assertIsNone(obj1)
+
+        # Create an account
+        account_obj = AccountFactory.create()
+        obj2 = api.get_account(account_id=account_obj.id)
+
+        self.assertIsNotNone(obj2)
+
+    def test_get_account_by_card(self):
         # Retrieve an non-existent account
-        obj1 = api.get_account(card_id=1337)
+        obj1 = api.get_account_by_card(card_id=1337)
         self.assertIsNone(obj1)
 
         # Create an account
         CardFactory.create(number=1337)
-        obj2 = api.get_account(card_id=1337)
+        obj2 = api.get_account_by_card(card_id=1337)
 
         self.assertIsNotNone(obj2)
 
         account_objs = models.Account.objects.filter(id=obj2.id)
         self.assertEqual(account_objs.count(), 1)
+
+    def test_update_account(self):
+        account_obj = AccountFactory.create()
+        api.update_account(account_id=account_obj.id,
+                           name='1337',
+                           email='1337@foo.com')
+        account = api.get_account(account_id=account_obj.id)
+        # Test that correct fields are updated
+        self.assertEqual('1337', account.name)
+        self.assertEqual('1337@foo.com', account.email)
 
     def test_purchase(self):
         account_obj = AccountFactory.create()

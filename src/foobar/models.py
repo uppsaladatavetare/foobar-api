@@ -15,7 +15,11 @@ from . import enums
 class Account(UUIDModel, TimeStampedModel):
     user = models.ForeignKey(User, null=True, blank=True)
     name = models.CharField(null=True, blank=True, max_length=128)
-    email = models.CharField(null=True, blank=True, max_length=128)
+    email = models.EmailField(null=True, blank=True)
+
+    @property
+    def is_complete(self):
+        return bool(self.email)
 
     def __str__(self):
         return str(self.id)

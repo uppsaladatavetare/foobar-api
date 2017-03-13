@@ -67,7 +67,7 @@ class CardInline(admin.TabularInline):
 
 @admin.register(models.Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'user', 'balance')
+    list_display = ('id', 'name', 'user', 'balance', 'email')
     readonly_fields = ('id', 'wallet_link', 'date_created', 'date_modified')
     inlines = (CardInline, PurchaseInline,)
     search_fields = ('name',)
@@ -77,6 +77,7 @@ class AccountAdmin(admin.ModelAdmin):
                 'id',
                 'user',
                 'name',
+                'email'
             )
         }),
         ('Additional information', {

@@ -21,6 +21,9 @@ urlpatterns = [
     url(r'^admin/foobar/account/card/(?P<card_id>\d+)',
         foobar.views.account_for_card, name='account_for_card'),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'profile/(?P<token>.+)',
+        foobar.views.edit_profile,
+        name="edit_profile")
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,17 @@
+{% extends 'profile/base_profile.html' %}
+{% load i18n %} 
+{% block content %}
+	<div style="width:100%; height:30px;">
+	{% if messages %}	
+		{% for message in messages %}
+				<div class="info">{{ message }}</div>
+		{% endfor %}
+	{% endif %}
+	</div>
+	<form class="account_form" method="post" action="">
+		{% csrf_token %} 
+		{{ form }}
+		<input type="submit" name="save_changes" value="{% trans 'Save' %} " id="submit_changes" value="{{ account_email }}">
+	</form>
+
+{% endblock %}
