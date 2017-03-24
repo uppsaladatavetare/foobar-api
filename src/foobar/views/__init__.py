@@ -1,14 +1,14 @@
-from django.contrib.auth.decorators import permission_required
-from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import redirect
-from django.utils.translation import ugettext_lazy as _
-from . import api
-from django.shortcuts import render
-from .forms import CorrectionForm, DepositForm, EditProfileForm
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import permission_required
 from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
+from django.shortcuts import render
+from django.utils.translation import ugettext_lazy as _
 from foobar.wallet.api import get_wallet
-from django.core import signing
+from .forms import CorrectionForm, DepositForm, EditProfileForm
+from .decorators import token_required
+from .. import api
 
 
 @staff_member_required
@@ -63,23 +63,18 @@ def wallet_management(request, obj_id):
                    'form_class1': form_class1})
 
 
-def edit_profile(request, token):
-    form_class = EditProfileForm(request.POST or None)
-    try:
-        token = signing.loads(token, max_age=1800)
-    except signing.BadSignature:
-        return render(request, "profile/bad_request.html")
+@token_required
+def edit_profile(request, account):
+    form_class = EditProfileForm(
+        request.POST or None,
+        initial={'name': account.name, 'email': account.email}
+    )
 
-    if request.method == 'POST':
-        if form_class.is_valid():
-            api.update_account(token.get('id'),
-                               name=form_class.cleaned_data['name'],
-                               email=form_class.cleaned_data['email'])
-            messages.add_message(request, messages.INFO,
-                                 _('Successfully Saved'))
-            return HttpResponseRedirect(request.path)
-
-    account = api.get_account(token.get('id'))
-    form_class = EditProfileForm(initial={'name': account.name,
-                                          'email': account.email})
+    if request.method == 'POST' and form_class.is_valid():
+        api.update_account(
+            account.id,
+            name=form_class.cleaned_data['name'],
+            email=form_class.cleaned_data['email']
+        )
+        messages.add_message(request, messages.INFO, _('Successfully Saved'))
     return render(request, "profile/success.html", {'form': form_class})

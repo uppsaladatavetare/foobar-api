@@ -93,26 +93,34 @@ class FoobarViewTest(TestCase):
     def test_edit_profile(self, mock_update_account):
         account_obj = factories.AccountFactory.create()
         token = signing.dumps({'id': str(account_obj.id)})
-        url = reverse('edit_profile', kwargs={'token': token})
-        bad_token = reverse('edit_profile', kwargs={'token': 'bad'})
-        response1 = self.client.get(url)
-        response2 = self.client.get(bad_token)
+        good_token_url = reverse('edit_profile', kwargs={'token': token})
+        bad_token_url = reverse('edit_profile', kwargs={'token': 'bad'})
 
         # Assert that page can be found
-        self.assertEqual(response1.status_code, 200)
-        self.assertEqual(response2.status_code, 200)
+        response = self.client.get(good_token_url)
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(bad_token_url)
+        self.assertEqual(response.status_code, 403)
 
         # Assure update_account not called when url with bad token send POST
-        self.client.post(bad_token, {'name': 'foo',
-                                     'email': 'test@test.com',
-                                     'save_changes': ['Submit']})
+        self.client.post(bad_token_url, {
+            'name': 'foo',
+            'email': 'test@test.com',
+            'save_changes': ['Submit']
+        })
         mock_update_account.assert_not_called()
 
         # Assure set_balance is called when token is valid
-        token_data = signing.loads(token, max_age=1800)
-        self.client.post(url, {'name': 'foo',
-                               'email': 'test@test.com',
-                               'save_changes': ['Submit']})
-        mock_update_account.assert_called_with(token_data.get('id'),
+        self.client.post(good_token_url, {
+            'name': 'foo',
+            'email': 'test@test.com',
+            'save_changes': ['Submit']
+        })
+        mock_update_account.assert_called_with(account_obj.id,
                                                name='foo',
                                                email='test@test.com')
+
+        # Delete the account and try to use to token
+        account_obj.delete()
+        response = self.client.get(bad_token_url)
+        self.assertEqual(response.status_code, 403)
