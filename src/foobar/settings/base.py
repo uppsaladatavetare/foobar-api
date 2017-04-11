@@ -29,6 +29,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 # Application definition
 INSTALLED_APPS = (
     'rest_framework',
+    'crispy_forms',
 
     'shop',
     'wallet',
@@ -225,3 +226,5 @@ SWAGGER_SETTINGS = {
         }
     }
 }
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'

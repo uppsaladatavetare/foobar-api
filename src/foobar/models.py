@@ -15,11 +15,22 @@ from . import enums
 class Account(UUIDModel, TimeStampedModel):
     user = models.ForeignKey(User, null=True, blank=True)
     name = models.CharField(null=True, blank=True, max_length=128)
-    email = models.EmailField(null=True, blank=True)
+    email = models.EmailField(null=True, blank=True, unique=True)
+
+    REQUIRED_FIELDS = (
+        'name',
+        'email',
+    )
 
     @property
     def is_complete(self):
-        return bool(self.email)
+        return self.completeness == 1.0
+
+    @property
+    def completeness(self):
+        values = [getattr(self, field, None) for field in self.REQUIRED_FIELDS]
+        completed = [v for v in values if v]
+        return len(completed) / len(self.REQUIRED_FIELDS)
 
     def __str__(self):
         return str(self.id)

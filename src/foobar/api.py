@@ -23,8 +23,10 @@ def get_card(card_id):
         return None
 
 
-def get_account(account_id):
+def get_account(account_id=None, **kwargs):
     try:
+        if account_id is None:
+            return Account.objects.get(**kwargs)
         return Account.objects.get(id=account_id)
     except Account.DoesNotExist:
         return None

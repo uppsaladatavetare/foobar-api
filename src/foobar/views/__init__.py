@@ -4,10 +4,13 @@ from django.contrib.auth.decorators import permission_required
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
-from foobar.wallet.api import get_wallet
-from .forms import CorrectionForm, DepositForm, EditProfileForm
+from django.views.generic import TemplateView
+from foobar.wallet import api as wallet_api
 from .decorators import token_required
+from .forms import CorrectionForm, DepositForm, EditProfileForm
 from .. import api
 
 
@@ -28,7 +31,7 @@ def account_for_card(request, card_id):
 def wallet_management(request, obj_id):
     form_class = CorrectionForm(request.POST or None)
     form_class1 = DepositForm(request.POST or None, owner_id=obj_id)
-    wallet = get_wallet(obj_id)
+    wallet = wallet_api.get_wallet(obj_id)
     if request.method == 'POST':
         if 'save_correction' in request.POST:
             if form_class.is_valid():
@@ -63,18 +66,54 @@ def wallet_management(request, obj_id):
                    'form_class1': form_class1})
 
 
-@token_required
-def edit_profile(request, account):
-    form_class = EditProfileForm(
-        request.POST or None,
-        initial={'name': account.name, 'email': account.email}
-    )
+@method_decorator(token_required, name='dispatch')
+class BaseProfileView(TemplateView):
+    def dispatch(self, request, *args, **kwargs):
+        self._dispatch_kwargs = kwargs
+        return super().dispatch(request, *args, **kwargs)
 
-    if request.method == 'POST' and form_class.is_valid():
-        api.update_account(
-            account.id,
-            name=form_class.cleaned_data['name'],
-            email=form_class.cleaned_data['email']
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        wallet_obj, balance = wallet_api.get_balance(context['account'].id)
+        context['balance'] = balance
+        return context
+
+    def token_reverse(self, viewname, urlconf=None, args=None, kwargs=None,
+                      current_app=None):
+        kwargs = kwargs or {}
+        kwargs['token'] = self._dispatch_kwargs['token']
+        return reverse(viewname, urlconf, args, kwargs, current_app)
+
+
+class ProfileView(BaseProfileView):
+    template_name = 'profile/home.html'
+
+
+class EditProfileView(BaseProfileView):
+    template_name = 'profile/edit.html'
+
+    def get(self, request, token, account):
+        form = EditProfileForm(
+            initial={'name': account.name, 'email': account.email},
+            account=account
         )
-        messages.add_message(request, messages.INFO, _('Successfully Saved'))
-    return render(request, "profile/success.html", {'form': form_class})
+        context = {'form': form}
+        return self.render_to_response(context)
+
+    def post(self, request, token, account):
+        form = EditProfileForm(request.POST, account=account)
+        if form.is_valid():
+            api.update_account(
+                account.id,
+                name=form.cleaned_data['name'],
+                email=form.cleaned_data['email']
+            )
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                _('Your profile has been updated.')
+            )
+            url = self.token_reverse('profile-home')
+            return HttpResponseRedirect(url)
+        context = {'form': form}
+        return self.render_to_response(context)

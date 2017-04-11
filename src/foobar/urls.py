@@ -18,13 +18,16 @@ urlpatterns = [
         namespace='rest_framework')),
     url(r'^admin/wallet_management/(?P<obj_id>.+)',
         foobar.views.wallet_management,
-        name="wallet_management"),
+        name='wallet_management'),
     url(r'^admin/foobar/account/card/(?P<card_id>\d+)',
         foobar.views.account_for_card, name='account_for_card'),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'profile/(?P<token>.+)',
-        foobar.views.edit_profile,
-        name="edit_profile")
+    url(r'profile/(?P<token>[^/]+)/$',
+        foobar.views.ProfileView.as_view(),
+        name='profile-home'),
+    url(r'profile/(?P<token>[^/]+)/edit/$',
+        foobar.views.EditProfileView.as_view(),
+        name='profile-edit'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

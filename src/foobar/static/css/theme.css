@@ -1,0 +1,32 @@
+.navbar-custom {
+    background-color: #a70d0d;
+}
+.navbar-custom .navbar-brand,
+.navbar-custom .navbar-brand:hover,
+.navbar-custom .navbar-text {
+    color: rgba(255,255,255,.95);
+}
+.navbar-custom .navbar-nav .nav-link {
+    color: rgba(255,255,255,.8);
+}
+.navbar-custom .nav-item.active .nav-link,
+.navbar-custom .nav-item:hover .nav-link {
+    color: #ffffff;
+}
+.breadcrumb {
+	background: #d34a4a;
+}
+.breadcrumb .breadcrumb-item {
+	color: #fff;
+}
+.breadcrumb .breadcrumb-item.active,
+.breadcrumb-item+.breadcrumb-item::before {
+	color: #f5c8c8;
+}
+.breadcrumb-item+.breadcrumb-item::before {
+	content: "›";
+}
+.card.call-to-action {
+	background: rgba(255, 0, 0, 0.03);
+	border: solid 1px rgba(150, 12, 12, 0.13);
+}

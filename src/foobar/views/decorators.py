@@ -12,14 +12,14 @@ def token_required(f):
     @functools.wraps(f)
     def wrapper(request, *args, **kwargs):
         try:
-            token = kwargs.pop('token', None)
+            token = kwargs.get('token', None)
             data = signing.loads(token, max_age=1800)
         except signing.BadSignature:
-            return render(request, 'profile/bad_request.html', status=403)
+            return render(request, 'profile/invalid_token.html', status=403)
         kwargs['account'] = api.get_account(data.get('id'))
         if kwargs['account'] is None:
             log.warning('Received token for a non-existing account: %s.',
                         data.get('id'))
-            return render(request, 'profile/bad_request.html', status=403)
+            return render(request, 'profile/invalid_token.html', status=403)
         return f(request, *args, **kwargs)
     return wrapper

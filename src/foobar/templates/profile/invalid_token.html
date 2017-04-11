@@ -1,0 +1,16 @@
+{% extends 'profile/base.html' %}
+{% load i18n %}
+{% block breadcrumbs_outer %}{% endblock %}
+{% block content %}
+<div class="text-center">
+	<div class="p-2">
+		<span class="fa-stack fa-5x">
+			<i class="fa fa-qrcode fa-stack-1x"></i>
+			<i class="fa fa-ban fa-stack-2x text-danger"></i>
+		</span>
+	</div>
+	<div class="p-2">
+		{% trans "Your session has expired." %}
+	</div>
+</div>
+{% endblock %}

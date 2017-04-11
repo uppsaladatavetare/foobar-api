@@ -1,0 +1,43 @@
+{% extends 'profile/base.html' %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load foobar_utils %}
+
+{% block breadcrumbs_outer %}{% endblock %}
+
+{% block content %}
+<h5>{% blocktrans with name=account.name %}Welcome, {{ name }}!{% endblocktrans %}</h5>
+
+{% if not account.is_complete %}
+<div class="card call-to-action mt-3">
+	<div class="card-block">
+		<h4 class="card-title">{% trans 'Complete your profile!' %}</h4>
+		<div class="progress mb-2">
+			<div
+				class="progress-bar bg-success"
+				role="progressbar"
+				style="width: {{ account.completeness|percentage }}%"
+				aria-valuenow=" {{ account.completeness|percentage }}"
+				aria-valuemin="0"
+				aria-valuemax="100"
+			>{{ account.completeness|percentage }}%</div>
+		</div>
+		<p class="card-text">{% trans 'Help us by keeping your profile complete and up to date. We promise to use the contact details only when really necessary!' %}</p>
+		<a href="{% url 'profile-edit' token=token %}" class="btn btn-danger card-link">Update your profile</a>
+	</div>
+</div>
+{% endif %}
+
+<ul class="list-group mt-3">
+	<li class="list-group-item d-flex justify-content-between justify-content-sm-start">
+		<div><strong>{% trans 'Balance' %}</strong><strong class="hidden-xs-down">:</strong></div>
+		<div class="ml-1">{{ balance }}</div>
+	</li>
+	<li class="list-group-item d-flex justify-content-between justify-content-sm-start">
+		<div><strong>{% trans 'E-mail' %}</strong><strong class="hidden-xs-down">:</strong></div>
+		<div class="ml-1">{{ account.email|default:"---" }}</div>
+	</li>
+</ul>
+
+<a href="{% url 'profile-edit' token=token %}" class="btn btn-danger mt-2">Edit profile</a>
+{% endblock %}

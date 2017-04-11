@@ -93,8 +93,9 @@ class FoobarViewTest(TestCase):
     def test_edit_profile(self, mock_update_account):
         account_obj = factories.AccountFactory.create()
         token = signing.dumps({'id': str(account_obj.id)})
-        good_token_url = reverse('edit_profile', kwargs={'token': token})
-        bad_token_url = reverse('edit_profile', kwargs={'token': 'bad'})
+        home_url = reverse('profile-home', kwargs={'token': token})
+        good_token_url = reverse('profile-edit', kwargs={'token': token})
+        bad_token_url = reverse('profile-edit', kwargs={'token': 'bad'})
 
         # Assert that page can be found
         response = self.client.get(good_token_url)
@@ -111,7 +112,7 @@ class FoobarViewTest(TestCase):
         mock_update_account.assert_not_called()
 
         # Assure set_balance is called when token is valid
-        self.client.post(good_token_url, {
+        response = self.client.post(good_token_url, {
             'name': 'foo',
             'email': 'test@test.com',
             'save_changes': ['Submit']
@@ -119,6 +120,7 @@ class FoobarViewTest(TestCase):
         mock_update_account.assert_called_with(account_obj.id,
                                                name='foo',
                                                email='test@test.com')
+        self.assertRedirects(response, home_url)
 
         # Delete the account and try to use to token
         account_obj.delete()
