@@ -27,6 +27,15 @@ class ProductTrxFactory(factory.django.DjangoModelFactory):
     trx_type = enums.TrxType.PURCHASE
 
 
+class ProductTrxStatusFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.ProductTransactionStatus
+
+    status = enums.TrxStatus.PENDING
+    reference_ct = None
+    reference_id = None
+
+
 class ProductCategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.ProductCategory

@@ -2,7 +2,10 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
-from .models import Account, Card, Purchase, PurchaseItem, WalletLogEntry
+from .models import (
+    Account, Card, Purchase, PurchaseItem, WalletLogEntry
+)
+from utils.exceptions import InvalidTransition
 from foobar.wallet import api as wallet_api
 from shop import api as shop_api
 from shop import enums as shop_enums
@@ -43,7 +46,7 @@ def update_account(account_id, **kwargs):
 
 
 @transaction.atomic
-def purchase(account_id, products):
+def create_purchase(account_id, products):
     """
     Products should be a list of tuples containing paiars of product ids
     and their quantities. If account_id is None, a cash purchase will be made -
@@ -54,12 +57,16 @@ def purchase(account_id, products):
         account_obj = Account.objects.get(id=account_id)
     else:
         account_obj = None
+
     purchase_obj = Purchase.objects.create(account=account_obj)
+    purchase_obj.states.create(status=enums.PurchaseStatus.PENDING)
+
     products = [(shop_api.get_product(p), q) for p, q in products]
     # make sure the quantites are greater than 0
     assert all(q > 0 for _, q in products)
     # make sure that all the products exist
     assert all(p is not None for p, q in products)
+    items = []
     for product_obj, qty in products:
         trx_obj = PurchaseItem.objects.create(
             purchase=purchase_obj,
@@ -73,6 +80,7 @@ def purchase(account_id, products):
             qty=-qty,
             reference=trx_obj
         )
+        items.append(trx_obj)
     zero_money = Money(0, settings.DEFAULT_CURRENCY)
     total_amount = sum((p.price * q for p, q in products), zero_money)
     if account_id is not None:
@@ -88,16 +96,31 @@ def purchase(account_id, products):
             amount=total_amount,
             reference=purchase_obj.id
         )
+    return purchase_obj, items
+
+
+@transaction.atomic
+def finalize_purchase(purchase_id):
+    purchase_obj = Purchase.objects.get(pk=purchase_id)
+    purchase_obj.set_status(enums.PurchaseStatus.FINALIZED)
+
+    for item_trx_obj in purchase_obj.items.all():
+        trx_objs = shop_api.get_product_transactions_by_ref(item_trx_obj)
+        # Only one transaction with given reference should exist
+        assert len(trx_objs) == 1
+        shop_api.finalize_product_transaction(
+            trx_id=trx_objs[0].pk,
+            reference=purchase_obj
+        )
+    # Finalize related wallet transactions
+    trx_objs = wallet_api.get_transactions_by_ref(purchase_obj.pk)
+    # Exactly two transactions (withdrawal + deposit) with given reference
+    # should exist for card payments. Only one for cash payments.
+    assert ((purchase_obj.account is not None and len(trx_objs) == 2) or
+            purchase_obj.account is None and len(trx_objs) == 1)
+    wallet_api.finalize_transactions(trx_objs.values_list('pk', flat=True))
+
     return purchase_obj
-
-
-def get_purchase(purchase_id):
-    """Returns a purchase together with the purhcased items in it."""
-    try:
-        purchase_obj = Purchase.objects.get(id=purchase_id)
-        return purchase_obj, purchase_obj.items.all()
-    except Purchase.DoesNotExist:
-        return None
 
 
 @transaction.atomic
@@ -105,15 +128,17 @@ def cancel_purchase(purchase_id, force=False):
     purchase_obj = Purchase.objects.get(id=purchase_id)
     if not force and not purchase_obj.deletable:
         raise NotCancelableException(_('The purchase cannot be canceled.'))
-    assert purchase_obj.status == enums.PurchaseStatus.FINALIZED
-    purchase_obj.status = enums.PurchaseStatus.CANCELED
-    purchase_obj.save()
+
+    purchase_obj.set_status(enums.PurchaseStatus.CANCELED)
     # Cancel related shop item transactions
     for item_trx_obj in purchase_obj.items.all():
         trx_objs = shop_api.get_product_transactions_by_ref(item_trx_obj)
         # Only one transaction with given reference should exist
         assert len(trx_objs) == 1
-        shop_api.cancel_product_transaction(trx_objs[0].id)
+        shop_api.cancel_product_transaction(
+            trx_id=trx_objs[0].id,
+            reference=purchase_obj.account
+        )
     # Cancel related wallet transactions
     trx_objs = wallet_api.get_transactions_by_ref(purchase_obj.id)
     # Exactly two transactions (withdrawal + deposit) with given reference
@@ -122,6 +147,24 @@ def cancel_purchase(purchase_id, force=False):
             purchase_obj.account is None and len(trx_objs) == 1)
     for trx_obj in trx_objs:
         wallet_api.cancel_transaction(trx_obj.id)
+
+
+def update_purchase_status(purchase_id, status):
+    if status == enums.PurchaseStatus.FINALIZED:
+        finalize_purchase(purchase_id)
+    elif status == enums.PurchaseStatus.CANCELED:
+        cancel_purchase(purchase_id)
+    else:
+        raise InvalidTransition('Non-existing status {}'.format(status))
+
+
+def get_purchase(purchase_id):
+    """Returns a purchase together with the purchased items in it."""
+    try:
+        purchase_obj = Purchase.objects.get(id=purchase_id)
+        return purchase_obj, purchase_obj.items.all()
+    except Purchase.DoesNotExist:
+        return None, []
 
 
 def list_purchases(account_id, start=None, stop=None, **kwargs):
@@ -140,23 +183,21 @@ def list_purchases(account_id, start=None, stop=None, **kwargs):
 @transaction.atomic
 def calculate_correction(new_balance, owner_id, user, reference=None):
     """ Calculate the correct balance in the cash wallet """
-    wallet, old_balance = wallet_api.get_balance(
-                owner_id=owner_id,
-            )
+    wallet, old_balance = wallet_api.get_balance(owner_id=owner_id)
     correction_obj = WalletLogEntry.objects.create(
-                user=user,
-                trx_type=enums.TrxType.CORRECTION,
-                wallet=wallet,
-                comment=reference,
-                amount=0,
-                pre_balance=old_balance
-            )
+        user=user,
+        trx_type=enums.TrxType.CORRECTION,
+        wallet=wallet,
+        comment=reference,
+        amount=0,
+        pre_balance=old_balance
+    )
 
     correction_difference, difference = wallet_api.set_balance(
-                owner_id=owner_id,
-                new_balance=new_balance,
-                reference=correction_obj.id
-            )
+        owner_id=owner_id,
+        new_balance=new_balance,
+        reference=correction_obj.id
+    )
 
     correction_obj.amount = difference
     correction_obj.save()
@@ -166,32 +207,34 @@ def calculate_correction(new_balance, owner_id, user, reference=None):
 @transaction.atomic
 def make_deposit_or_withdrawal(amount, owner_id, user, reference=None):
     wallet, old_balance = wallet_api.get_balance(
-                owner_id=owner_id,
-            )
+        owner_id=owner_id,
+    )
 
     correction_obj = WalletLogEntry.objects.create(
-            user=user,
-            trx_type=enums.TrxType.CORRECTION,
-            wallet=wallet,
-            comment=reference,
-            amount=amount,
-            pre_balance=old_balance
-        )
+        user=user,
+        trx_type=enums.TrxType.CORRECTION,
+        wallet=wallet,
+        comment=reference,
+        amount=amount,
+        pre_balance=old_balance
+    )
 
     if amount.amount < 0:
-        wallet_api.withdraw(
+        trx_obj = wallet_api.withdraw(
             owner_id=owner_id,
             amount=-amount,
             reference=correction_obj.id
         )
+        wallet_api.finalize_transaction(trx_obj.pk)
         correction_obj.trx_type = enums.TrxType.WITHDRAWAL
         correction_obj.save()
     elif amount.amount > 0:
-        wallet_api.deposit(
+        trx_obj = wallet_api.deposit(
             owner_id=owner_id,
             amount=amount,
             reference=correction_obj.id
         )
+        wallet_api.finalize_transaction(trx_obj.pk)
         correction_obj.trx_type = enums.TrxType.DEPOSIT
         correction_obj.save()
 

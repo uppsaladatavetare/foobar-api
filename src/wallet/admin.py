@@ -13,10 +13,10 @@ class ReadOnlyMixin(object):
 
 class WalletTransactionViewerInline(ReadOnlyMixin, admin.TabularInline):
     model = models.WalletTransaction
-    fields = ('id', 'trx_type', 'amount', 'reference',
+    fields = ('id', 'status', 'amount', 'reference',
               'date_created')
     max_num = 25
-    readonly_fields = ('id', 'trx_type', 'amount', 'reference',
+    readonly_fields = ('id', 'status', 'amount', 'reference',
                        'date_created')
     ordering = ('-date_created',)
     verbose_name = _('View transaction')
@@ -25,7 +25,7 @@ class WalletTransactionViewerInline(ReadOnlyMixin, admin.TabularInline):
 
 class WalletTransactionCreatorInline(admin.TabularInline):
     model = models.WalletTransaction
-    fields = ('trx_type', 'amount', 'reference',)
+    fields = ('status', 'amount', 'reference',)
     max_num = 1
     verbose_name = _('Add new transaction')
     verbose_name_plural = _('Add new transaction')
@@ -40,9 +40,9 @@ class WalletTransactionCreatorInline(admin.TabularInline):
 
 @admin.register(models.WalletTransaction)
 class WalletTransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'trx_type', 'amount', 'reference', 'date_created')
+    list_display = ('id', 'status', 'amount', 'reference', 'date_created')
     readonly_fields = list_display
-    list_filter = ('trx_type',)
+    # list_filter = ('trx_type',)
     exclude = ('wallet',)
     ordering = ('-date_created',)
     verbose_name = _('Transaction')

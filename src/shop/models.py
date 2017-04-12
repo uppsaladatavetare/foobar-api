@@ -11,6 +11,7 @@ from bananas.models import TimeStampedModel, UUIDModel
 from moneyed import Money
 from enumfields import EnumIntegerField
 from djmoney.models.fields import MoneyField
+from utils.enums import validate_transition
 from utils.models import ScannerField
 from . import enums, querysets
 
@@ -294,13 +295,31 @@ class ProductTransaction(UUIDModel, TimeStampedModel):
     product = models.ForeignKey(Product, related_name='transactions')
     qty = models.IntegerField(verbose_name=_('quantity'))
     trx_type = EnumIntegerField(enums.TrxType)
-    trx_status = EnumIntegerField(enums.TrxStatus,
-                                  default=enums.TrxStatus.FINALIZED)
-    reference_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE,
-                                     null=True, blank=True)
-    reference_id = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
-    reference = GenericForeignKey('reference_ct', 'reference_id')
+
     objects = querysets.ProductTrxQuerySet.as_manager()
+
+    @property
+    def trx_status(self):
+        # As a transaction should never _not_ be in a state, we want
+        # latest to throw an exception when this does not happen
+        state = self.states.latest('date_created')
+        return state.status
+
+    def set_status(self, status, reference=None):
+        validate_transition(
+            enums.TrxStatus,
+            from_state=self.trx_status,
+            to_state=status
+        )
+
+        ct = None
+        if reference is not None:
+            ct = ContentType.objects.get_for_model(reference)
+        self.states.create(
+            status=status,
+            reference_ct=ct,
+            reference_id=reference.pk if reference is not None else None
+        )
 
     class Meta:
         verbose_name = _('transaction')
@@ -308,3 +327,21 @@ class ProductTransaction(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return '{0.product.name} {0.trx_type} {0.qty}'.format(self)
+
+
+class ProductTransactionStatus(UUIDModel, TimeStampedModel):
+    trx = models.ForeignKey('ProductTransaction', related_name='states')
+    status = EnumIntegerField(enums.TrxStatus, default=enums.TrxStatus.PENDING)
+
+    reference_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE,
+                                     null=True, blank=True)
+    reference_id = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
+    reference = GenericForeignKey('reference_ct', 'reference_id')
+
+    class Meta:
+        ordering = ('-date_created',)
+        verbose_name = _('transaction status')
+        verbose_name_plural = _('transaction statuses')
+
+    def __str__(self):
+        return '{0.status}'.format(self)

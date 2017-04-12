@@ -9,6 +9,7 @@ from djmoney.models.fields import MoneyField
 from bananas.models import UUIDModel, TimeStampedModel
 from shop import api as product_api
 from utils.models import ScannerField
+from utils.enums import validate_transition
 from . import enums
 
 
@@ -58,8 +59,6 @@ class Purchase(UUIDModel, TimeStampedModel):
     # account is None for cash payments
     account = models.ForeignKey(Account, related_name='purchases',
                                 null=True, blank=True)
-    status = EnumIntegerField(enums.PurchaseStatus,
-                              default=enums.PurchaseStatus.FINALIZED)
     amount = MoneyField(
         max_digits=10,
         decimal_places=2,
@@ -68,6 +67,24 @@ class Purchase(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ['-date_created']
+
+    @property
+    def status(self):
+        # As a purchase should never _not_ be in a state, we want
+        # latest to throw an exception when this does not happen
+        try:
+            state = self.states.latest('date_created')
+            return state.status
+        except PurchaseStatus.DoesNotExist:
+            return None
+
+    def set_status(self, status):
+        validate_transition(
+            enums.PurchaseStatus,
+            from_state=self.status,
+            to_state=status
+        )
+        self.states.create(status=status)
 
     @property
     def deletable(self):
@@ -79,6 +96,19 @@ class Purchase(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return str(self.id)
+
+
+class PurchaseStatus(UUIDModel, TimeStampedModel):
+    status = EnumIntegerField(
+        enums.PurchaseStatus,
+        default=enums.PurchaseStatus.PENDING
+    )
+    purchase = models.ForeignKey('Purchase', related_name='states')
+
+    class Meta:
+        ordering = ('-date_created',)
+        verbose_name = _('purchase status')
+        verbose_name_plural = _('purchase statuses')
 
 
 class PurchaseItem(UUIDModel):

@@ -142,9 +142,9 @@ class PurchaseAdmin(ReadOnlyMixin, admin.ModelAdmin):
     list_display = ('id', 'payment_method', 'status', '_amount',
                     'date_created',)
     readonly_fields = ('id', 'amount', 'date_created', 'account',
-                       'status', 'date_modified')
+                       'date_modified')
     inlines = (PurchaseItemInline,)
-    list_filter = ('status', PaymentMethodFilter,)
+    list_filter = (PaymentMethodFilter,)
     change_list_template = 'admin/purchase/list.html'
     date_hierarchy = 'date_created'
     actions = ['cancel_purchases']

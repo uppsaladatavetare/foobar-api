@@ -4,6 +4,7 @@ from rest_framework import status
 from shop.tests.factories import (
     ProductFactory,
     ProductTrxFactory,
+    ProductTrxStatusFactory,
     ProductCategoryFactory
 )
 from shop.enums import TrxType
@@ -24,11 +25,13 @@ class TestProductAPI(AuthenticatedAPITestCase):
     def test_retrieve_existing(self):
         # retrieve an existing product
         product_obj = ProductFactory.create()
-        ProductTrxFactory.create(
+        trx_obj = ProductTrxFactory.create(
             product=product_obj,
             qty=10,
             trx_type=TrxType.INVENTORY
         )
+        ProductTrxStatusFactory(trx=trx_obj)
+
         url = reverse('api:products-detail', kwargs={'pk': product_obj.id})
         response = self.api_client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

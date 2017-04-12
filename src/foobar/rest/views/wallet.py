@@ -42,11 +42,13 @@ class WalletAPI(viewsets.ViewSet):
         owner_serializer.is_valid(raise_exception=True)
         deposit_serializer = WalletDepositSerializer(data=request.POST)
         deposit_serializer.is_valid(raise_exception=True)
-        wallet_api.deposit(
+        trx_obj = wallet_api.deposit(
             owner_serializer.validated_data['owner_id'],
             deposit_serializer.validated_data['amount'],
             deposit_serializer.validated_data['reference']
         )
+        # Temporarily placed here as long as we only handle PENDING internally
+        wallet_api.finalize_transaction(trx_obj.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @detail_route(methods=['POST'])
@@ -57,11 +59,14 @@ class WalletAPI(viewsets.ViewSet):
         withdrawal_serializer = WalletWithdrawalSerializer(data=request.POST)
         withdrawal_serializer.is_valid(raise_exception=True)
         try:
-            wallet_api.withdraw(
+            trx_obj = wallet_api.withdraw(
                 owner_serializer.validated_data['owner_id'],
                 withdrawal_serializer.validated_data['amount'],
                 withdrawal_serializer.validated_data['reference']
             )
+            # Temporarily placed here as long as we only handle
+            # PENDING internally
+            wallet_api.finalize_transaction(trx_obj.pk)
         except InsufficientFunds:
             # TODO: move this to serializer? think about possible
             # race conditions

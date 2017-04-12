@@ -8,14 +8,21 @@ class ProductQuerySet(models.QuerySet):
 
 
 class ProductTrxQuerySet(models.QuerySet):
-    def finalized(self):
-        return self.filter(trx_status=enums.TrxStatus.FINALIZED)
-
     def restocks(self):
         return self.filter(trx_type__in=[
             enums.TrxType.INVENTORY,
             enums.TrxType.CORRECTION
         ])
 
-    def quantity(self):
-        return self.finalized().aggregate(qty=models.Sum('qty'))['qty'] or 0
+    def finalized(self):
+        # Filter out the latest status timestamps for every transaction
+        stamps = self.annotate(
+            latest_stamp=models.Max('states__date_created')
+        ).values_list('latest_stamp', flat=True)
+
+        states = self.filter(
+            states__date_created__in=stamps,
+            states__status=enums.TrxStatus.FINALIZED
+        )
+
+        return states

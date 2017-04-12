@@ -41,6 +41,8 @@ class ShopAPITest(TestCase):
             qty=1
         )
         self.assertIsNotNone(trx_obj)
+        self.assertEqual(trx_obj.trx_status, enums.TrxStatus.PENDING)
+
         product_obj = api.get_product(product_obj.id)
         self.assertEqual(product_obj.qty, 1)
         trx_obj = api.create_product_transaction(
@@ -49,6 +51,8 @@ class ShopAPITest(TestCase):
             qty=-2
         )
         self.assertIsNotNone(trx_obj)
+        self.assertEqual(trx_obj.trx_status, enums.TrxStatus.PENDING)
+
         product_obj = api.get_product(product_obj.id)
         self.assertEqual(product_obj.qty, -1)
 
@@ -85,6 +89,10 @@ class ShopAPITest(TestCase):
         product_obj = api.get_product(product_obj.id)
         self.assertEqual(product_obj.qty, 3)
         api.cancel_product_transaction(trx_obj.id)
+
+        trx_obj.refresh_from_db()
+        self.assertEqual(trx_obj.trx_status, enums.TrxStatus.CANCELED)
+
         product_obj = api.get_product(product_obj.id)
         self.assertEqual(product_obj.qty, 1)
 
@@ -334,10 +342,20 @@ class ShopAPITest(TestCase):
         timestamp = api.predict_quantity(product.id, product.qty - 1,
                                          current_date=date(2016, 11, 18))
         self.assertIsNone(timestamp)
-        factories.ProductTrxFactory.create(
+        trx_obj = factories.ProductTrxFactory.create(
             product=product,
             qty=initial_qty,
             trx_type=enums.TrxType.INVENTORY,
+            date_created=timezone.make_aware(initial_timestamp)
+        )
+        factories.ProductTrxStatusFactory(
+            trx=trx_obj,
+            status=enums.TrxStatus.PENDING,
+            date_created=timezone.make_aware(initial_timestamp)
+        )
+        factories.ProductTrxStatusFactory(
+            trx=trx_obj,
+            status=enums.TrxStatus.FINALIZED,
             date_created=timezone.make_aware(initial_timestamp)
         )
         # Product restocked, but no purchases made yet
@@ -345,11 +363,21 @@ class ShopAPITest(TestCase):
                                          current_date=date(2016, 11, 18))
         self.assertIsNone(timestamp)
         for qty, timestamp in trx_data:
-            factories.ProductTrxFactory.create(
+            trx_obj = factories.ProductTrxFactory.create(
                 product=product,
                 qty=qty,
                 date_created=timezone.make_aware(timestamp),
                 trx_type=enums.TrxType.PURCHASE
+            )
+            factories.ProductTrxStatusFactory(
+                trx=trx_obj,
+                status=enums.TrxStatus.PENDING,
+                date_created=timezone.make_aware(timestamp)
+            )
+            factories.ProductTrxStatusFactory(
+                trx=trx_obj,
+                status=enums.TrxStatus.FINALIZED,
+                date_created=timezone.make_aware(timestamp)
             )
         timestamp = api.predict_quantity(product.id,
                                          target=product.qty,
@@ -469,3 +497,32 @@ class ShopAPITest(TestCase):
         mock_order_from_supplier.assert_has_calls([
             mock.call(product1.id, 48, supplier_id=supplier.id)
         ])
+
+    def test_finalize_pending_product_trx(self):
+        product_obj = factories.ProductFactory.create()
+        trx_obj1 = api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=1
+        )
+
+        trx_obj2 = api.create_product_transaction(
+            product_id=product_obj.id,
+            trx_type=enums.TrxType.INVENTORY,
+            qty=2
+        )
+        product_obj.refresh_from_db()
+        # We update quantity when a pending transaction is created
+        self.assertEqual(product_obj.qty, 3)
+
+        self.assertEqual(trx_obj1.trx_status, enums.TrxStatus.PENDING)
+        self.assertEqual(trx_obj2.trx_status, enums.TrxStatus.PENDING)
+
+        api.finalize_product_transaction(trx_obj1.pk)
+        api.finalize_product_transaction(trx_obj2.pk)
+
+        product_obj.refresh_from_db()
+        self.assertEqual(trx_obj1.trx_status, enums.TrxStatus.FINALIZED)
+        self.assertEqual(trx_obj2.trx_status, enums.TrxStatus.FINALIZED)
+        # Quantity should not have changed when we've finalized
+        self.assertEqual(product_obj.qty, 3)

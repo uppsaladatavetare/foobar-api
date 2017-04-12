@@ -1,14 +1,16 @@
+from unittest import mock
+import uuid
 from django.test import TestCase
 from django.conf import settings
 from foobar import api, enums, models
 from foobar.wallet import api as wallet_api
+from utils.exceptions import InvalidTransition
 from shop.tests.factories import ProductFactory
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxType
-from .factories import AccountFactory, CardFactory
+from wallet import enums as wallet_enums
+from .factories import AccountFactory, CardFactory, PurchaseItemFactory
 from moneyed import Money
 from django.contrib.auth.models import User
-import uuid
 
 
 class FoobarAPITest(TestCase):
@@ -66,11 +68,13 @@ class FoobarAPITest(TestCase):
     def test_purchase(self):
         account_obj = AccountFactory.create()
         wallet_obj = WalletFactory.create(owner_id=account_obj.id)
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         product_obj1 = ProductFactory.create(
             code='1337733113370',
             name='Billys Original',
@@ -85,12 +89,27 @@ class FoobarAPITest(TestCase):
             (product_obj1.id, 3),
             (product_obj2.id, 1),
         ]
-        purchase_obj = api.purchase(account_obj.id, products)
+        purchase_obj, _ = api.create_purchase(account_obj.id, products)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.PENDING)
         self.assertEqual(purchase_obj.amount, Money(69, 'SEK'))
+
         product_obj1.refresh_from_db()
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty, -3)
         self.assertEqual(product_obj2.qty, -1)
+
+        _, balance = wallet_api.get_balance(account_obj.id)
+        self.assertEqual(balance, Money(931, 'SEK'))
+        _, balance = wallet_api.get_balance(settings.FOOBAR_MAIN_WALLET)
+        self.assertEqual(balance, Money(0, 'SEK'))
+
+        purchase_obj = api.finalize_purchase(purchase_obj.pk)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.FINALIZED)
+        product_obj1.refresh_from_db()
+        product_obj2.refresh_from_db()
+        self.assertEqual(product_obj1.qty, -3)
+        self.assertEqual(product_obj2.qty, -1)
+
         _, balance = wallet_api.get_balance(account_obj.id)
         self.assertEqual(balance, Money(931, 'SEK'))
         _, balance = wallet_api.get_balance(settings.FOOBAR_MAIN_WALLET)
@@ -99,11 +118,13 @@ class FoobarAPITest(TestCase):
     def test_cancel_card_purchase(self):
         account_obj = AccountFactory.create()
         wallet_obj = WalletFactory.create(owner_id=account_obj.id)
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         product_obj1 = ProductFactory.create(
             code='1337733113370',
             name='Billys Original',
@@ -118,7 +139,7 @@ class FoobarAPITest(TestCase):
             (product_obj1.id, 3),
             (product_obj2.id, 1),
         ]
-        purchase_obj = api.purchase(account_obj.id, products)
+        purchase_obj, _ = api.create_purchase(account_obj.id, products)
         api.cancel_purchase(purchase_obj.id)
         purchase_obj, _ = api.get_purchase(purchase_obj.id)
         self.assertEqual(purchase_obj.status, enums.PurchaseStatus.CANCELED)
@@ -146,7 +167,7 @@ class FoobarAPITest(TestCase):
             (product_obj1.id, 3),
             (product_obj2.id, 1),
         ]
-        purchase_obj = api.purchase(None, products)
+        purchase_obj, _ = api.create_purchase(None, products)
         api.cancel_purchase(purchase_obj.id)
         purchase_obj, _ = api.get_purchase(purchase_obj.id)
         self.assertEqual(purchase_obj.status, enums.PurchaseStatus.CANCELED)
@@ -172,22 +193,31 @@ class FoobarAPITest(TestCase):
             (product_obj1.id, 3),
             (product_obj2.id, 1),
         ]
-        api.purchase(None, products)
+        purchase_obj, _ = api.create_purchase(account_id=None,
+                                              products=products)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.PENDING)
         product_obj1.refresh_from_db()
         product_obj2.refresh_from_db()
         self.assertEqual(product_obj1.qty, -3)
         self.assertEqual(product_obj2.qty, -1)
+        _, balance = wallet_api.get_balance(settings.FOOBAR_CASH_WALLET)
+        self.assertEqual(balance, Money(0, 'SEK'))
+
+        purchase_obj = api.finalize_purchase(purchase_obj.pk)
+        self.assertEqual(purchase_obj.status, enums.PurchaseStatus.FINALIZED)
         _, balance = wallet_api.get_balance(settings.FOOBAR_CASH_WALLET)
         self.assertEqual(balance, Money(69, 'SEK'))
 
     def test_get_purchase(self):
         account_obj = AccountFactory.create()
         wallet_obj = WalletFactory.create(owner_id=account_obj.id)
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         product_obj1 = ProductFactory.create(
             code='1337733113370',
             name='Billys Original',
@@ -196,18 +226,20 @@ class FoobarAPITest(TestCase):
         products = [
             (product_obj1.id, 3),
         ]
-        purchase_obj = api.purchase(account_obj.id, products)
-        obj = api.get_purchase(purchase_obj.id)
+        purchase_obj, _ = api.create_purchase(account_obj.id, products)
+        obj, _ = api.get_purchase(purchase_obj.id)
         self.assertIsNotNone(obj)
 
     def test_list_purchases(self):
         account_obj = AccountFactory.create()
         wallet_obj = WalletFactory.create(owner_id=account_obj.id)
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         product_obj1 = ProductFactory.create(
             code='1337733113370',
             name='Billys Original',
@@ -216,17 +248,19 @@ class FoobarAPITest(TestCase):
         products = [
             (product_obj1.id, 3),
         ]
-        api.purchase(account_obj.id, products)
+        api.create_purchase(account_obj.id, products)
         objs = api.list_purchases(account_obj.id)
         self.assertEqual(len(objs), 1)
 
-    def test_calculation_correctíon(self):
+    def test_calculation_correction(self):
         wallet_obj = WalletFactory.create()
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         user_obj = User.objects.create_superuser(
             'the_baconator', 'bacon@foobar.com', '123'
         )
@@ -275,11 +309,13 @@ class FoobarAPITest(TestCase):
 
     def test_make_deposit_or_withdrawal(self):
         wallet_obj = WalletFactory.create()
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1000, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1000, 'SEK')
         )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
         user_obj = User.objects.create_superuser(
             'the_baconator', 'bacon@foobar.com', '123'
         )
@@ -318,3 +354,75 @@ class FoobarAPITest(TestCase):
         self.assertEqual(correction_obj.amount.amount, 0)
         _, balance = wallet_api.get_balance(wallet_obj.owner_id)
         self.assertEqual(balance.amount, 1050)
+
+    def test_finalize_pending_purchase(self):
+        account_obj = AccountFactory.create()
+        wallet_obj = WalletFactory.create(owner_id=account_obj.pk)
+        trx_obj = WalletTrxFactory.create(
+            wallet=wallet_obj,
+            amount=Money(1000, 'SEK')
+        )
+        trx_obj.set_status(wallet_enums.TrxStatus.PENDING)
+        trx_obj.set_status(wallet_enums.TrxStatus.FINALIZED)
+
+        product_obj1 = ProductFactory.create(
+            code='8437438439393',
+            name='Fat',
+            price=Money(42, 'SEK')
+        )
+        products = [(product_obj1.pk, 3)]
+
+        pending_obj, _ = api.create_purchase(
+            account_id=account_obj.pk,
+            products=products
+        )
+
+        self.assertIsNotNone(pending_obj.status)
+        self.assertEqual(pending_obj.status, enums.PurchaseStatus.PENDING)
+        self.assertEqual(pending_obj.states.count(), 1)
+        self.assertEqual(pending_obj.account.pk, account_obj.pk)
+        self.assertEqual(pending_obj.amount.amount, 126)
+
+        _, balance = wallet_api.get_balance(wallet_obj.owner_id)
+        self.assertEqual(balance, Money(874, 'SEK'))
+
+        finalized_obj = api.finalize_purchase(purchase_id=pending_obj.pk)
+
+        self.assertIsNotNone(finalized_obj.status)
+        self.assertEqual(finalized_obj.status, enums.PurchaseStatus.FINALIZED)
+        self.assertEqual(finalized_obj.states.count(), 2)
+        self.assertEqual(finalized_obj.account.pk, account_obj.pk)
+        self.assertEqual(finalized_obj.amount.amount, 126)
+
+        _, balance = wallet_api.get_balance(wallet_obj.owner_id)
+        self.assertEqual(balance, Money(874, 'SEK'))
+
+        _, balance = wallet_api.get_balance(settings.FOOBAR_MAIN_WALLET)
+        self.assertEqual(balance, Money(126, 'SEK'))
+
+        self.assertEqual(finalized_obj.items.count(), 1)
+        item = finalized_obj.items.first()
+
+        self.assertEqual(item.qty, 3)
+        self.assertEqual(item.amount.amount, 42)
+        self.assertEqual(item.product_id, product_obj1.pk)
+
+    @mock.patch('foobar.api.finalize_purchase')
+    @mock.patch('foobar.api.cancel_purchase')
+    def test_update_purchase_status(self, mock_cancel_purchase,
+                                    mock_finalize_purchase):
+        item1 = PurchaseItemFactory()
+        purchase1 = item1.purchase
+        api.update_purchase_status(purchase1.id,
+                                   enums.PurchaseStatus.FINALIZED)
+        mock_finalize_purchase.assert_called_once_with(purchase1.id)
+        item2 = PurchaseItemFactory()
+        purchase2 = item2.purchase
+        api.update_purchase_status(purchase2.id,
+                                   enums.PurchaseStatus.CANCELED)
+        mock_cancel_purchase.assert_called_once_with(purchase2.id)
+        item3 = PurchaseItemFactory()
+        purchase3 = item3.purchase
+        with self.assertRaises(InvalidTransition):
+            api.update_purchase_status(purchase3.id,
+                                       enums.PurchaseStatus.PENDING)

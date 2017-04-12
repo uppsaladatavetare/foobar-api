@@ -5,6 +5,13 @@ from __future__ import unicode_literals
 from django.db import migrations
 import enumfields.fields
 import wallet.enums
+import enum
+
+
+class TrxType(enum.Enum):
+    FINALIZED = 0
+    PENDING = 1
+    CANCELLATION = 2
 
 
 class Migration(migrations.Migration):
@@ -17,6 +24,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='wallettransaction',
             name='trx_type',
-            field=enumfields.fields.EnumIntegerField(default=0, enum=wallet.enums.TrxType),
+            field=enumfields.fields.EnumIntegerField(default=0, enum=TrxType),
         ),
     ]

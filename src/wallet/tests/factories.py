@@ -2,11 +2,7 @@ import uuid
 import factory.fuzzy
 from .. import models, enums
 from moneyed import Money
-
-
-class FuzzyMoney(factory.fuzzy.FuzzyDecimal):
-    def fuzz(self):
-        return Money(super().fuzz(), 'SEK')
+from utils.factories import FuzzyMoney
 
 
 class WalletFactory(factory.django.DjangoModelFactory):
@@ -23,4 +19,19 @@ class WalletTrxFactory(factory.django.DjangoModelFactory):
 
     wallet = factory.SubFactory(WalletFactory)
     amount = FuzzyMoney(0, 100000)
-    trx_type = enums.TrxType.FINALIZED
+
+
+class WalletTrxStatusFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.WalletTransactionStatus
+
+    trx = factory.SubFactory(WalletTrxFactory)
+    status = enums.TrxStatus.FINALIZED
+
+
+class WalletTrxWithStatusFactory(WalletTrxFactory):
+    states = factory.RelatedFactory(
+        WalletTrxStatusFactory,
+        'trx',
+        status=enums.TrxStatus.FINALIZED
+    )

@@ -1,5 +1,5 @@
 from django.db import transaction
-from .enums import TrxType
+from .enums import TrxStatus
 from . import models, exceptions
 
 
@@ -32,19 +32,24 @@ def set_balance(owner_id, new_balance, reference=None):
     wallet, old_balance = get_balance(owner_id, new_balance.currency)
     difference = new_balance - old_balance
     if difference.amount < 0:
-        return withdraw(owner_id, -difference, reference), difference
+        trx_obj = withdraw(owner_id, -difference, reference)
+        trx_obj = finalize_transaction(trx_obj.pk)
+        return trx_obj, difference
+
     elif difference.amount > 0:
-        return deposit(owner_id, difference, reference), difference
+        trx_obj = deposit(owner_id, difference, reference)
+        trx_obj = finalize_transaction(trx_obj.pk)
+        return trx_obj, difference
     return None, difference
 
 
-def list_transactions(owner_id, currency, trx_type=None, direction=None,
+def list_transactions(owner_id, currency, status=None, direction=None,
                       start=None, limit=None):
     """Return a list of transactions matching the criteria."""
     wallet_obj = get_wallet(owner_id, currency)
     qs = models.Wallet.objects.get(id=wallet_obj.id).transactions
-    if trx_type is not None:
-        qs = qs.filter(trx_type=trx_type)
+    if status is not None:
+        qs = qs.by_status(status)
     if direction is not None:
         qs = qs.by_direction(direction)
     return qs.all()[start:limit]
@@ -66,15 +71,24 @@ def get_transactions_by_ref(reference):
 def cancel_transaction(trx_id):
     """Cancels a transaction."""
     trx_obj = models.WalletTransaction.objects.get(id=trx_id)
-    return trx_obj.wallet.transactions.create(
-        trx_type=TrxType.CANCELLATION,
-        amount=-trx_obj.amount,
-        internal_reference=trx_obj
-    )
+    trx_obj.set_status(TrxStatus.CANCELLATION)
+    return trx_obj
+
+
+def finalize_transaction(trx_id):
+    """Finalizes a transaction."""
+    trx_obj = models.WalletTransaction.objects.get(id=trx_id)
+    trx_obj.set_status(TrxStatus.FINALIZED)
+    return trx_obj
 
 
 @transaction.atomic
-def withdraw(owner_id, amount, reference=None, pending=False):
+def finalize_transactions(trx_list):
+    return [finalize_transaction(trx_id) for trx_id in trx_list]
+
+
+@transaction.atomic
+def withdraw(owner_id, amount, reference=None):
     """Withdraw given amount from the wallet.
 
     Throw InsufficientFunds if there is not enough money in the wallet.
@@ -84,30 +98,26 @@ def withdraw(owner_id, amount, reference=None, pending=False):
     if amount > balance:
         raise exceptions.InsufficientFunds
     qs = models.Wallet.objects.get(id=wallet_obj.id).transactions
-    trx_obj = qs.create(
-        trx_type=TrxType.PENDING if pending else TrxType.FINALIZED,
-        amount=-amount,
-        reference=reference
-    )
+    trx_obj = qs.create(amount=(-amount), reference=reference)
+    trx_obj.set_status(TrxStatus.PENDING)
     return trx_obj
 
 
 @transaction.atomic
-def deposit(owner_id, amount, reference=None, pending=False):
+def deposit(owner_id, amount, reference=None):
     """Deposit given amount into the wallet."""
     assert amount.amount > 0, "The amount must be positive."
     wallet_obj = get_wallet(owner_id, amount.currency)
     qs = models.Wallet.objects.get(id=wallet_obj.id).transactions
-    trx_obj = qs.create(
-        trx_type=TrxType.PENDING if pending else TrxType.FINALIZED,
-        amount=amount,
-        reference=reference
-    )
+
+    trx_obj = qs.create(amount=amount, reference=reference)
+    trx_obj.set_status(TrxStatus.PENDING)
     return trx_obj
 
 
 @transaction.atomic
 def transfer(debtor_id, creditor_id, amount, reference=None):
     """Withdraw money from debtor's wallet and deposit it into creditor's"""
-    withdraw(debtor_id, amount, reference)
-    deposit(creditor_id, amount, reference)
+    withdrawal_trx = withdraw(debtor_id, amount, reference)
+    deposit_trx = deposit(creditor_id, amount, reference)
+    return withdrawal_trx, deposit_trx

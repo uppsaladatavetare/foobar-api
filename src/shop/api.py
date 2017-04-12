@@ -48,10 +48,12 @@ def get_product(id):
 def get_product_transactions_by_ref(reference):
     """Return item transactions with given reference."""
     ct = ContentType.objects.get_for_model(reference)
-    return models.ProductTransaction.objects.filter(
+    qs = models.ProductTransactionStatus.objects.filter(
         reference_ct=ct,
         reference_id=reference.pk,
-    )
+    ).values_list('trx', flat=True).distinct()
+
+    return models.ProductTransaction.objects.filter(pk__in=qs).distinct()
 
 
 @transaction.atomic
@@ -65,9 +67,9 @@ def create_product_transaction(product_id, trx_type, qty, reference=None):
     ct = None
     if reference is not None:
         ct = ContentType.objects.get_for_model(reference)
-    trx_obj = product_obj.transactions.create(
-        trx_type=trx_type,
-        qty=qty,
+    trx_obj = product_obj.transactions.create(trx_type=trx_type, qty=qty)
+    trx_obj.states.create(
+        status=enums.TrxStatus.PENDING,  # It's here to avoid any confusion
         reference_ct=ct,
         reference_id=reference.pk if reference is not None else None
     )
@@ -75,10 +77,15 @@ def create_product_transaction(product_id, trx_type, qty, reference=None):
 
 
 @transaction.atomic
-def cancel_product_transaction(trx_id):
+def finalize_product_transaction(trx_id, reference=None):
+    trx_obj = models.ProductTransaction.objects.get(pk=trx_id)
+    trx_obj.set_status(enums.TrxStatus.FINALIZED, reference)
+
+
+@transaction.atomic
+def cancel_product_transaction(trx_id, reference=None):
     trx_obj = models.ProductTransaction.objects.get(id=trx_id)
-    trx_obj.trx_status = enums.TrxStatus.CANCELED
-    trx_obj.save()
+    trx_obj.set_status(enums.TrxStatus.CANCELED, reference)
 
 
 def list_products(start=None, limit=None, **kwargs):
@@ -263,7 +270,7 @@ def predict_quantity(product_id, target, current_date=None):
         return None
 
     # Find the last restock transaction
-    qs = product_obj.transactions.finalized()
+    qs = models.ProductTransaction.objects.finalized()
     restock_trx = qs.restocks().order_by('-date_created').first()
     if restock_trx is None:
         # The product has never been restocked.

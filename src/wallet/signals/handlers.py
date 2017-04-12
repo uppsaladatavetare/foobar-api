@@ -1,11 +1,19 @@
-from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .. import models
+
+from .. import models, enums
+from .signals import status_change
 
 
-@receiver(post_save, sender=models.WalletTransaction)
-def update_wallet_balance(sender, instance, created, **kwargs):
-    wallet_obj = instance.wallet
-    if created and instance.countable:
-        wallet_obj.balance += instance.signed_amount
-        wallet_obj.save()
+@receiver(status_change, sender=models.WalletTransactionStatus)
+def update_wallet_balance(sender, instance, from_status,
+                          to_status, direction, **kwargs):
+    multiplier = enums.get_direction_multiplier(
+        enum=enums.TrxStatus,
+        from_state=from_status,
+        to_state=to_status,
+        direction=direction
+    )
+
+    wallet_obj = instance.trx.wallet
+    wallet_obj.balance += (multiplier * instance.trx.amount)
+    wallet_obj.save()

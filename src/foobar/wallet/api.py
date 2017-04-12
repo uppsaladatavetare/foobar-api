@@ -15,3 +15,5 @@ deposit = api.deposit
 transfer = api.transfer
 get_transactions_by_ref = api.get_transactions_by_ref
 cancel_transaction = api.cancel_transaction
+finalize_transaction = api.finalize_transaction
+finalize_transactions = api.finalize_transactions

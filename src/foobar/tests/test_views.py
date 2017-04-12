@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from wallet.tests.factories import WalletFactory, WalletTrxFactory
-from wallet.enums import TrxType
+from wallet import enums
 from . import factories
 from django.core import signing
 
@@ -47,11 +47,12 @@ class FoobarViewTest(TestCase):
     @mock.patch('foobar.api.make_deposit_or_withdrawal')
     def test_wallet_management(self, mock_deposit_withdrawal, mock_correction):
         wallet_obj = WalletFactory.create()
-        WalletTrxFactory.create(
+        trx_obj = WalletTrxFactory.create(
             wallet=wallet_obj,
-            amount=Money(1200, 'SEK'),
-            trx_type=TrxType.FINALIZED
+            amount=Money(1200, 'SEK')
         )
+        trx_obj.set_status(enums.TrxStatus.PENDING)
+        trx_obj.set_status(enums.TrxStatus.FINALIZED)
         url = reverse('wallet_management',
                       kwargs={'obj_id': wallet_obj.owner_id})
         # Test that deposit or withdrawal
