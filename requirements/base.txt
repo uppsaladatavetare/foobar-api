@@ -5,7 +5,7 @@ git+https://github.com/disqus/django-bitfield.git@306ba5#egg=django-bitfield
 git+https://github.com/kjagiello/django-money.git@45ea5e#egg=django-money
 djangorestframework==3.6.1
 coreapi==2.3.0
-Pillow==2.9.0
+Pillow==4.2.1
 pluggy==0.3.0
 py==1.4.30
 py-moneyed==0.5.0
