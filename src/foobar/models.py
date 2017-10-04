@@ -67,6 +67,9 @@ class Purchase(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ['-date_created']
+        permissions = (
+            ('can_take_card_payments', _('Can take card payments')),
+        )
 
     @property
     def status(self):
