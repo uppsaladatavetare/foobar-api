@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse_lazy as reverse
 from rest_framework import status
 from .base import AuthenticatedAPITestCase
-from ..factories import CardFactory, UserFactory
+from ..factories import CardFactory
 
 
 class TestAccountAPI(AuthenticatedAPITestCase):
