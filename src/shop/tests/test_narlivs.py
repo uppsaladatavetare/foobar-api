@@ -74,3 +74,11 @@ class NarlivsTest(TestCase):
         self.assertEqual(len(items), 41)
         for item in items:
             self.assertEqual(len(item.sku), 9)
+
+    def test_receive_delivery3(self):
+        api = get_supplier_api('narlivs')
+        path = self.report_path('delivery_report3.pdf')
+        items = api.parse_delivery_report(path)
+        self.assertEqual(len(items), 46)
+        for item in items:
+            self.assertEqual(len(item.sku), 9)

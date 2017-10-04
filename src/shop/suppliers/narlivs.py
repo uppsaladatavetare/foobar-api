@@ -101,6 +101,9 @@ class SupplierAPI(SupplierBase):
 
                 # Let's make sure that the computed price is correct
                 prev_computed_net_price = prev_item['price'] * prev_item['qty']
+                prev_computed_net_price = prev_computed_net_price.quantize(
+                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP
+                )
                 if prev_item['net_price'] != prev_computed_net_price:
                     msg = ('The computed price and quantity seem to be wrong '
                            'for product with SKU {} (probably a report '
