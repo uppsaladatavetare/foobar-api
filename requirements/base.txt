@@ -1,6 +1,6 @@
 git+https://github.com/kjagiello/django-bananas.git@ad8f344#egg=django-bananas
 django-enumfields==0.8.2
-django-model-utils==2.2
+django-model-utils==3.0.0
 git+https://github.com/disqus/django-bitfield.git@306ba5#egg=django-bitfield
 git+https://github.com/kjagiello/django-money.git@45ea5e#egg=django-money
 djangorestframework==3.6.1
