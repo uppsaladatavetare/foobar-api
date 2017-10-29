@@ -1,5 +1,5 @@
 -r base.txt
-django-factory-boy==0.1.6
+django-factory-boy==1.0.0
 factory-boy==2.5.2
 tox==2.1.1
 pyflakes==0.8.1
