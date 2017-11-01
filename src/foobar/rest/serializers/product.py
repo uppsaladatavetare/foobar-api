@@ -9,6 +9,7 @@ class ProductSerializer(serializers.Serializer):
     description = serializers.CharField(allow_null=True)
     image = serializers.ImageField(allow_null=True)
     price = MoneyField(non_negative=True)
+    category = serializers.UUIDField(read_only=True, source='category.id')
     active = serializers.BooleanField(default=False)
     qty = serializers.IntegerField(read_only=True)
 
@@ -22,3 +23,4 @@ class ProductParamSerializer(serializers.Serializer):
 class ProductCategorySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField()
+    image = serializers.ImageField(allow_null=True)
