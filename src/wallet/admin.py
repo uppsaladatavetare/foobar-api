@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
-from . import models
+from . import models, enums
 
 
 class ReadOnlyMixin(object):
@@ -25,7 +25,7 @@ class WalletTransactionViewerInline(ReadOnlyMixin, admin.TabularInline):
 
 class WalletTransactionCreatorInline(admin.TabularInline):
     model = models.WalletTransaction
-    fields = ('status', 'amount', 'reference',)
+    fields = ('amount', 'reference',)
     max_num = 1
     verbose_name = _('Add new transaction')
     verbose_name_plural = _('Add new transaction')
@@ -74,3 +74,11 @@ class WalletAdmin(ReadOnlyMixin, admin.ModelAdmin):
 
     class Media:
         css = {'all': ('css/hide_admin_original.css',)}
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.set_status(enums.TrxStatus.PENDING)
+            instance.save()
+            instance.set_status(enums.TrxStatus.FINALIZED)
+        formset.save_m2m()
